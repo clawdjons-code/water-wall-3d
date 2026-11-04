@@ -819,14 +819,14 @@ place(neoflo(), 5.34, HY, PZ);
 label('neoFlo FRSS-6 · 6 gpm limiter', 'the only restrictor', [5.34, HY + .06, PZ + .03], 'minor');
 hpex(4.475, 4.515); hpex(4.585, 4.645); hpex(4.875, 4.905); hpex(4.975, 5.015); hpex(5.125, 5.19); hpex(5.25, 5.295); hpex(5.385, 5.44);
 
-/* --- UV section: bypass tee, lockable ISO, PRO20 vertical, UV SV ------ */
+/* --- UV section: bypass tee, UV ISO, PRO20 vertical, UV SV ------ */
 place(plainTee(true), 5.47, HY, PZ);
 const tag = labelTex(256, 384, '#c0181e', [
   { t: 'DANGER', c: '#fff', f: 'bold 52px Arial', y: 60 }, { t: 'UV BYPASS', c: '#fff', f: 'bold 42px Arial', y: 140 },
   { t: 'KEEP LOCKED', c: '#fff', f: 'bold 34px Arial', y: 210 }, { t: 'CLOSED', c: '#fff', f: 'bold 34px Arial', y: 252 },
   { t: 'untreated water', c: '#ffd7d7', f: '26px Arial', y: 320 }], '#fff');
-place(ballValve({ lockable: true, lock: true }), 5.585, HY, PZ);
-label('UV ISO in · lockable', '', [5.585, HY + .09, PZ + .04], 'minor');
+place(ballValve(), 5.585, HY, PZ);
+label('UV ISO in', '', [5.585, HY + .09, PZ + .04], 'minor');
 place(union(), 5.69, HY, PZ);
 hpex(5.50, 5.53); hpex(5.64, 5.655);
 const UVX = 5.97;
@@ -856,10 +856,11 @@ pex([[UVX + .076, HY, PZ], [6.075, HY, PZ]]);
 place(union(), 6.11, HY, PZ);
 { const v = gcValve(); place(v.g, 6.26, HY, PZ); v.g.updateMatrixWorld(true); cablePts.push([v.g.localToWorld(v.cab.clone()), 6.5, M.wireUV]); }
 label('UV SHUTOFF · GC NS201', 'interlocked to COMMcenter · fail-closed', [6.26, HY + .17, PZ], 'warn');
-place(ballValve({ lockable: true, lock: true }), 6.41, HY, PZ);
-label('UV ISO out · lockable', '', [6.41, HY + .09, PZ + .04], 'minor');
+place(ballValve(), 6.41, HY, PZ);
+label('UV ISO out', '', [6.41, HY + .09, PZ + .04], 'minor');
 place(plainTee(true), 6.54, HY, PZ);
 hpex(6.145, 6.20); hpex(6.32, 6.355); hpex(6.465, 6.51);
+// WW-ONELOCK-v1: the ONLY padlock in the model is on this UV bypass
 // single UV bypass, padlocked CLOSED, reed switch proves closed
 pex([[5.47, HY - .036, PZ], [5.47, .42, PZ], [5.95, .42, PZ]]);
 { const b = ballValve({ closed: true, lockable: true, lock: true, reed: true, tag }); place(b, 6.005, .42, PZ); b.updateMatrixWorld(true); cablePts.push([b.localToWorld(V(.03, .105, .058)), 6.5, M.cableGray]); }
@@ -876,7 +877,7 @@ pex([[6.975, HY, PZ], [7.06, HY, PZ], [7.06, 2.95, PZ]], { end: false });
 label('TO HOUSE · treated', '1" PEX-A up through joists', [7.06, 2.38, PZ], '');
 
 /* ------------------------------------------------------------------ BOM allowance: 3 more isolation valves, locations TBD */
-// BOM: 9 equipment isolation + 3 lockable UV valves = 12. Shown in-line: 6 equipment + 3 UV = 9.
+// BOM: 9 equipment isolation + 3 UV valves (2 ISO + bypass) = 12. Shown in-line: 6 equipment + 3 UV = 9.
 // The plan leaves the remaining 3 locations TBD, so they are shown as an explicit, un-plumbed allowance.
 {
   const A = new THREE.Group(); A.position.set(1.62, .30, .66); scene.add(A);
@@ -1324,10 +1325,10 @@ const UNITS = [];
     ['isoBB2', ISO('Isolation valve (Big Blue out)', 'After the Big Blue filter, before tap P3.'), [5.07, HY + .02, PZ], [.08, .14, .12]],
     ['P3', TAP('P3', 'After the Big Blue 5 µm filter, before the 6 gpm flow limiter and the UV.'), [5.22, HY + .1, PZ], [.07, .3, .1]],
     ['neoflo', S({ name: '6 gpm flow limiter', model: 'neoFlo FRSS-6-100FF · 316 stainless', what: 'Caps the flow at 6 gallons per minute so water never moves through the UV faster than it is rated to disinfect.', flow: 'After tap P3, before the UV inlet valve.', vendor: 'FreshWaterSystems', price: '$48.95' }), [5.34, HY, PZ], [.09, .08, .08]],
-    ['isoUVin', ISO('UV isolation valve (in)', 'After the flow limiter, before the VIQUA UV.', true), [5.585, HY + .02, PZ], [.09, .15, .13]],
+    ['isoUVin', ISO('UV isolation valve (in)', 'After the flow limiter, before the VIQUA UV.'), [5.585, HY + .02, PZ], [.09, .15, .13]],
     ['uv', S({ name: 'UV disinfection system', model: 'VIQUA PRO20 650653 · NSF/ANSI 55 Class A (bundled restrictor not installed)', what: 'Ultraviolet light kills bacteria and viruses in the water. A sensor measures UV strength.', flow: 'After the flow limiter, before the UV shut-off valve and tap P4.', vendor: 'AquaHome Supply', price: '$3,264.00' }), [5.97, 1.16, PZ], [.13, 1.0, .14]],
     ['uvValve', S({ name: 'UV shut-off valve', ...NS, what: 'Only opens while the UV reports it is healthy. If the lamp fails or power is lost, the spring closes it so untreated water cannot reach the house.', flow: 'After the VIQUA UV, before the UV outlet valve and tap P4.' }), [6.26, HY + .05, PZ], [.13, .22, .11]],
-    ['isoUVout', ISO('UV isolation valve (out)', 'After the UV shut-off valve, before tap P4.', true), [6.41, HY + .02, PZ], [.09, .15, .13]],
+    ['isoUVout', ISO('UV isolation valve (out)', 'After the UV shut-off valve, before tap P4.'), [6.41, HY + .02, PZ], [.09, .15, .13]],
     ['bypass', S({ name: 'UV bypass valve (padlocked closed)', model: 'Raven L-610T001-NL 1" lockable ball valve + padlock + DANGER tag', what: 'Lets water go around the UV for emergencies only. It is kept locked closed because water through it is not disinfected.', flow: 'Parallel loop below the UV: from the tee after the flow limiter to the tee after the UV outlet valve.', vendor: 'SupplyHouse', price: '$29.53' }), [5.99, .42, PZ], [.12, .2, .14]],
     ['reed', S({ name: 'Bypass reed switch', model: 'Tane FM-106 magnetic reed switch', what: 'A magnetic switch on the bypass handle. If anyone opens the bypass, Home Assistant sends an alert.', flow: 'Mounted on the UV bypass valve handle; wired to the ESP32.', vendor: 'Amazon', price: 'Price not verified' }), [6.10, .43, .19], [.05, .06, .06]],
     ['P4', TAP('P4', 'After the UV and UV shut-off valve, before the house supply.'), [6.66, HY + .1, PZ], [.07, .32, .1]],
