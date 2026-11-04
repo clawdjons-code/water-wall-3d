@@ -43,6 +43,19 @@
   #legend .r{display:flex;align-items:center;gap:7px;white-space:nowrap}
   #legend .sw{width:22px;height:8px;border-radius:2px;flex:none}
   #legend .k{color:#9aa6b1;margin-top:4px}
+  /* tap-to-inspect panel (WW-INSPECT-v1) */
+  #inspect{position:fixed;z-index:100000;display:none;background:rgba(16,20,25,.96);color:#e9edf1;border:1px solid #3d4955;
+           box-shadow:0 8px 30px rgba(0,0,0,.5);font-size:13px;line-height:1.45;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #inspect.open{display:block}
+  #inspect .x{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:17px;border:1px solid #4a5560;background:#222a33;
+              color:#fff;font-size:20px;line-height:30px;text-align:center;cursor:pointer;padding:0}
+  #inspect h3{margin:0 40px 2px 0;font-size:16px;color:#fff}
+  #inspect .mdl{color:#9fc9f0;font-size:12px;margin-bottom:8px}
+  #inspect dl{margin:0} #inspect dt{color:#8d98a3;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;margin-top:8px}
+  #inspect dd{margin:1px 0 0} #inspect dd.pr{color:#7fe0a0;font-weight:600}
+  @media (min-width:641px){#inspect{top:12px;right:12px;width:340px;max-height:calc(100% - 24px);border-radius:10px;padding:14px 16px 16px}}
+  @media (max-width:640px){#inspect{left:0;right:0;bottom:0;max-height:52%;border-radius:14px 14px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom))}
+    #inspect:before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:#4a5560;margin:-6px auto 10px}}
 </style>
 <script>
   // early failure reporting: catches module-load errors and unhandled rejections too
@@ -56,6 +69,7 @@
 <body>
 <div id="app"></div>
 <div id="labels"></div>
+<div id="inspect" role="dialog" aria-label="Equipment details"><button class="x" aria-label="Close">×</button><div class="body"></div></div>
 <div id="ui">
   <div class="t">Whole-house well water treatment wall</div>
   <div class="s">rev e · flow left → right · 1" PEX-A + lead-free brass · model units: meters</div>
@@ -1249,6 +1263,119 @@ window.addEventListener('resize', () => {
   if (curView && VIEWS[curView].fit) window.setView(curView); else renderFrame();
 });
 
+/* ------------------------------------------------------------------ tap / click to inspect (WW-INSPECT-v1) */
+const UNITS = [];
+{
+  const S = (o) => o;
+  const NS = { model: 'GC Valves NS201YH16C7FG9 · 1" 316SS, normally closed, 24 VDC 10 W', vendor: 'AutomationDirect', price: '$611.00 each (2 needed)' };
+  const TAP = (n, flow) => S({ name: 'Pressure tap ' + n, model: 'Honeywell MIPAN1XX100PSAAX 0–100 psi transducer on a Bluefin BRT100 tee + Dahl ¼" mini ball valve' + ((n === 'P0' || n === 'P4') ? ' + Bluefin 0–100 psi gauge' : ''),
+    what: 'Reads water pressure at this point and sends it to Home Assistant. Comparing neighbouring taps shows when a filter is clogging (pressure drop across it rises).' + ((n === 'P0' || n === 'P4') ? ' Also has a dial gauge you can read by eye.' : ''),
+    flow, vendor: 'Mouser (transducer) · SupplyHouse (tee, bushing, mini valve' + ((n === 'P0' || n === 'P4') ? ', gauge' : '') + ')',
+    price: '$72.77 transducer + $23.23 tee + $9.86 bushing + $21.07 mini valve' + ((n === 'P0' || n === 'P4') ? ' + $12.66 gauge + $5.50 ¼" tee' : '') });
+  const ISO = (name, flow, lock) => S({ name, model: 'Raven L-610T001-NL 1" full-port ball valve' + (lock ? ' (padlocked open)' : ''),
+    what: 'Manual shut-off so the neighbouring equipment can be serviced or removed without draining the whole system.', flow, vendor: 'SupplyHouse', price: '$29.53' });
+  const SMP = (n, flow) => S({ name: 'Sample tap ' + n, model: 'Bluefin BRT100 tee + BRB100-025 bushing + Dahl 521-51-61 ¼" mini ball valve',
+    what: 'A small valve for drawing a water sample at this stage, to test what each piece of equipment is removing.', flow, vendor: 'SupplyHouse', price: '$23.23 + $9.86 + $21.07 = $54.16' });
+  // [id, data, centre xyz, size xyz]
+  const D = [
+    ['tank', S({ name: 'Existing pressure tank', model: 'Existing well tank + tank tee (reused)', what: 'Stores pressurised water from the well pump so the pump does not start for every tap opening.', flow: 'First in line: right after the well pump, before tap P0.', vendor: 'Existing — reused', price: '$0' }), [.40, .62, .5], [.44, 1.24, .44]],
+    ['P0', TAP('P0', 'Start of the train: after the pressure tank, before the Rusco spin-down screen.'), [1.10, HY + .1, PZ], [.07, .32, .1]],
+    ['S0', SMP('S0 (raw)', 'After P0, before the Rusco spin-down screen.'), [1.22, HY - .08, PZ], [.06, .16, .08]],
+    ['rusco', S({ name: 'Rusco spin-down sediment screen', model: 'Rusco 1-100-F · 100 mesh (with 2× Sch80 PVC adapters)', what: 'A clear, washable screen that catches sand and grit before it reaches anything else. You spin a valve to flush it.', flow: 'After tap P0, before the water meter.', vendor: 'SupplyHouse (adapters 247garden)', price: '$56.23 (+ $0.84 adapters)' }), [1.50, HY - .07, PZ], [.15, .38, .15]],
+    ['isoMeter', ISO('Isolation valve (meter)', 'After the Rusco screen, before the water meter.'), [1.80, HY + .02, PZ], [.08, .14, .12]],
+    ['meter', S({ name: 'Pulse water meter', model: 'DAE MJP-100P · 1" · 1 gallon per pulse', what: 'Counts every gallon used and reports it to the ESP32. Also proves the shut-off valves really closed (no flow while closed).', flow: 'After the Rusco screen, before the leak shut-off valve.', vendor: 'DAE Control', price: '$119.00' }), [2.03, HY, PZ], [.17, .16, .13]],
+    ['leakValve', S({ name: 'Leak shut-off valve', ...NS, what: 'Automatic main shut-off. A spring holds it closed unless powered, so it shuts the water off if a leak sensor trips or power is lost.', flow: 'After the water meter, before the Atmos-AIO iron filter.' }), [2.33, HY + .05, PZ], [.13, .22, .11]],
+    ['isoLeak', ISO('Isolation valve (leak valve)', 'After the leak shut-off valve, before the iron filter.'), [2.48, HY + .02, PZ], [.08, .14, .12]],
+    ['aio', S({ name: 'Iron / sulphur filter', model: 'Aquatell Atmos-AIO · Clack WS1 head · 10×54 tank · Katalox Light', what: 'Injects air to oxidise iron and sulphur (rotten-egg smell) and traps the particles in the media bed, then backwashes itself to the drain.', flow: 'After the leak shut-off valve, before tap P1 and the softener.', vendor: 'Aquatell', price: '$1,198.99' }), [2.95, .86, .55], [.3, 1.72, .32]],
+    ['P1', TAP('P1', 'After the Atmos-AIO iron filter, before the softener.'), [3.15, HY + .1, PZ], [.07, .3, .1]],
+    ['S1', SMP('S1 (post-iron)', 'After the iron filter, before the softener.'), [3.27, HY - .08, PZ], [.06, .16, .08]],
+    ['softener', S({ name: 'Water softener', model: 'AquaHome Clack WS1 48,000-grain · 10×54 · 1.5 ft³ resin + EZsalt sensor', what: 'Removes hardness (calcium/magnesium) so you get no scale on fixtures and heaters. The EZsalt sensor reports salt level.', flow: 'After the iron filter (tap P1), before tap P2 and the Big Blue filter.', vendor: 'AquaHome Supply', price: '$1,483.90 (cart, incl. EZsalt)' }), [3.80, .86, .55], [.3, 1.72, .32]],
+    ['brine', S({ name: 'Brine tank + EZsalt', model: '18×40 brine tank (provisional size) · EZsalt level sensor', what: 'Holds the salt the softener uses to regenerate. The sensor in the lid tells Home Assistant when salt is low.', flow: 'Beside the softener, connected by a 3/8" brine line.', vendor: 'AquaHome Supply (with softener)', price: 'Included with the softener' }), [4.30, .52, .5], [.48, 1.06, .48]],
+    ['P2', TAP('P2', 'After the softener, before the Big Blue 5 µm filter.'), [4.05, HY + .1, PZ], [.07, .3, .1]],
+    ['S2', SMP('S2 (post-soft)', 'After the softener, before the Big Blue filter.'), [4.17, HY - .08, PZ], [.06, .16, .08]],
+    ['isoBB1', ISO('Isolation valve (Big Blue in)', 'After tap P2, before the Big Blue filter.'), [4.42, HY + .02, PZ], [.08, .14, .12]],
+    ['bigblue', S({ name: 'Big Blue 5 µm cartridge filter', model: 'Pentek 150233 20" Big Blue housing + DGD-5005-20 cartridge (1 spare)', what: 'Catches fine particles (down to 5 microns) so the UV light can shine through clear water.', flow: 'After the softener (tap P2), before tap P3 and the flow limiter.', vendor: 'WaterFiltersOnline (housing) · Home Depot (cartridges)', price: '$74.99 + 2× $27.49' }), [4.76, HY - .2, PZ], [.2, .62, .2]],
+    ['isoBB2', ISO('Isolation valve (Big Blue out)', 'After the Big Blue filter, before tap P3.'), [5.07, HY + .02, PZ], [.08, .14, .12]],
+    ['P3', TAP('P3', 'After the Big Blue 5 µm filter, before the 6 gpm flow limiter and the UV.'), [5.22, HY + .1, PZ], [.07, .3, .1]],
+    ['neoflo', S({ name: '6 gpm flow limiter', model: 'neoFlo FRSS-6-100FF · 316 stainless', what: 'Caps the flow at 6 gallons per minute so water never moves through the UV faster than it is rated to disinfect.', flow: 'After tap P3, before the UV inlet valve.', vendor: 'FreshWaterSystems', price: '$48.95' }), [5.34, HY, PZ], [.09, .08, .08]],
+    ['isoUVin', ISO('UV isolation valve (in)', 'After the flow limiter, before the VIQUA UV.', true), [5.585, HY + .02, PZ], [.09, .15, .13]],
+    ['uv', S({ name: 'UV disinfection system', model: 'VIQUA PRO20 650653 · NSF/ANSI 55 Class A (bundled restrictor not installed)', what: 'Ultraviolet light kills bacteria and viruses in the water. A sensor measures UV strength.', flow: 'After the flow limiter, before the UV shut-off valve and tap P4.', vendor: 'AquaHome Supply', price: '$3,264.00' }), [5.97, 1.16, PZ], [.13, 1.0, .14]],
+    ['uvValve', S({ name: 'UV shut-off valve', ...NS, what: 'Only opens while the UV reports it is healthy. If the lamp fails or power is lost, the spring closes it so untreated water cannot reach the house.', flow: 'After the VIQUA UV, before the UV outlet valve and tap P4.' }), [6.26, HY + .05, PZ], [.13, .22, .11]],
+    ['isoUVout', ISO('UV isolation valve (out)', 'After the UV shut-off valve, before tap P4.', true), [6.41, HY + .02, PZ], [.09, .15, .13]],
+    ['bypass', S({ name: 'UV bypass valve (padlocked closed)', model: 'Raven L-610T001-NL 1" lockable ball valve + padlock + DANGER tag', what: 'Lets water go around the UV for emergencies only. It is kept locked closed because water through it is not disinfected.', flow: 'Parallel loop below the UV: from the tee after the flow limiter to the tee after the UV outlet valve.', vendor: 'SupplyHouse', price: '$29.53' }), [5.99, .42, PZ], [.12, .2, .14]],
+    ['reed', S({ name: 'Bypass reed switch', model: 'Tane FM-106 magnetic reed switch', what: 'A magnetic switch on the bypass handle. If anyone opens the bypass, Home Assistant sends an alert.', flow: 'Mounted on the UV bypass valve handle; wired to the ESP32.', vendor: 'Amazon', price: 'Price not verified' }), [6.10, .43, .19], [.05, .06, .06]],
+    ['P4', TAP('P4', 'After the UV and UV shut-off valve, before the house supply.'), [6.66, HY + .1, PZ], [.07, .32, .1]],
+    ['S3', SMP('S3 (post-UV)', 'After the UV, before the house supply.'), [6.78, HY - .08, PZ], [.06, .16, .08]],
+    ['isoHouse', ISO('Isolation valve (to house)', 'Last valve: after tap P4, before the house supply line.'), [6.92, HY + .02, PZ], [.08, .14, .12]],
+    ['shellyPlug', S({ name: 'Smart plug (UV power monitor)', model: 'Shelly Plug US Gen4', what: 'Powers the UV and measures its electricity use, so a dead lamp or tripped UV shows up in Home Assistant.', flow: 'In the UV receptacle; feeds the VIQUA controller.', vendor: 'Shelly US', price: '$24.99' }), [5.62, 1.946, .07], [.07, .09, .07]],
+    ['uvCtrl', S({ name: 'VIQUA PRO20 controller', model: 'VIQUA PRO20 controller (included with the UV)', what: 'Runs the UV lamp, shows UV strength, flow and lamp life, and raises alarms.', flow: 'Above the UV reactor; feeds the COMMcenter.', vendor: 'AquaHome Supply (with PRO20)', price: 'Included with the PRO20' }), [6.32, 1.97, .05], [.26, .18, .09]],
+    ['comm', S({ name: 'VIQUA COMMcenter', model: 'VIQUA 270272-R COMMcenter kit (incl. 260201-R dry contact + RJ45 cables)', what: 'Turns the UV controller’s status into a simple on/off contact: closed means the UV is healthy. That contact keeps the UV shut-off valve open.', flow: 'Beside the UV controller; contact goes to the ZL-RLS1-24 relay in the controls box.', vendor: 'Aquatell', price: '$855.00' }), [6.66, 1.97, .03], [.15, .12, .06]],
+    ['uv420', S({ name: 'UV intensity interface', model: 'VIQUA 270268-R 4–20 mA signal interface', what: 'Outputs UV strength as an analogue signal so Home Assistant can trend it and warn before the lamp gets weak.', flow: 'Beside the COMMcenter; signal goes to the ESP32 via the NOYITO converter.', vendor: 'Aquatell', price: '$141.00' }), [6.84, 1.97, .02], [.08, .06, .05]],
+    ['flood1', S({ name: 'Leak sensor (train)', model: 'Shelly Flood Gen4 (battery)', what: 'Sits on the floor and detects water. It tells the Shelly 1 to close the leak valve directly, even if Home Assistant is down.', flow: 'On the floor under the equipment train.', vendor: 'Shelly US', price: '$39.20 each' }), [2.45, .02, .66], [.09, .05, .09]],
+    ['flood2', S({ name: 'Leak sensor (brine tank)', model: 'Shelly Flood Gen4 (battery)', what: 'Detects a brine tank or softener drain leak and triggers the leak shut-off.', flow: 'On the floor beside the brine tank.', vendor: 'Shelly US', price: '$39.20 each' }), [4.62, .02, .26], [.09, .05, .09]],
+    // controls DIN enclosure (origin 7.5, 1.85); boxes reach to the cover so a front tap hits them
+    ['hdr24', S({ name: '24 V power supply', model: 'Mean Well HDR-60-24 (24 VDC 2.5 A, DIN rail)', what: 'Powers both shut-off valve coils and the interposing relay.', flow: 'Controls box, top row; 120 VAC in, 24 VDC out to the relay and Shelly 1.', vendor: 'DigiKey', price: '$20.90' }), [7.30, 2.02, .1], [.055, .1, .2]],
+    ['hdr5', S({ name: '5 V power supply (fused)', model: 'Mean Well HDR-15-5 (5 VDC, DIN rail) + inline fuse', what: 'Clean, fused 5 V for the ESP32 and the five pressure transducers.', flow: 'Controls box, top row; 5 V to the ESP32 and taps P0–P4.', vendor: 'DigiKey', price: '$12.50' }), [7.345, 2.02, .1], [.03, .1, .2]],
+    ['relay', S({ name: 'Interposing relay', model: 'AutomationDirect ZL-RLS1-24 (24 VDC coil, SPDT 10 A)', what: 'The UV safety link: the COMMcenter’s “UV healthy” contact energises this relay, and only then does 24 V reach the UV shut-off valve.', flow: 'Controls box, top row; between the COMMcenter and the UV shut-off valve.', vendor: 'AutomationDirect', price: '$34.50' }), [7.39, 2.02, .1], [.03, .1, .2]],
+    ['shelly1', S({ name: 'Leak valve driver', model: 'Shelly 1 Gen4 UL (dry-contact relay)', what: 'Switches 24 V to the leak shut-off valve. Leak sensors turn it off directly; Home Assistant can also open/close it.', flow: 'Controls box, top row; drives the leak shut-off valve.', vendor: 'Shelly US', price: '$27.99' }), [7.432, 2.02, .1], [.045, .1, .2]],
+    ['esp32', S({ name: 'ESP32 sensor controller', model: 'ESP32-DevKitC (4-pack) + 2× ADS1115 ADC + NOYITO 4–20 mA converter + 4.7k/10k divider board', what: 'Reads the five pressure taps, the water meter pulses, the bypass reed switch and UV intensity, and sends them to Home Assistant.', flow: 'Controls box, middle row; wired to the taps, meter, reed switch and UV interface.', vendor: 'Amazon', price: '$17.99 (4-pack) + 2× $6.99 ADS1115 + $6.99 NOYITO (resistor kit unpriced)' }), [7.40, 1.855, .1], [.32, .08, .2]],
+    ['haGreen', S({ name: 'Home Assistant Green', model: 'Home Assistant Green hub (12 V adapter included)', what: 'The local smart-home brain: collects every sensor, shows dashboards, sends alerts and runs the automations — no cloud needed.', flow: 'Controls box, bottom row; Ethernet to the network.', vendor: 'CloudFree', price: '$198.85' }), [7.63, 1.66, .1], [.12, .12, .2]],
+    ['ro', S({ name: 'Kitchen reverse-osmosis system', model: 'Frizzlife PD600-TAM3 tankless RO (replaces the Aquasana)', what: 'Under-sink drinking-water filter that removes dissolved solids; the screen shows water quality (TDS).', flow: 'At the kitchen sink, fed from the treated house supply (after everything on this wall).', vendor: 'Amazon', price: '$399.49' }), [9.20, .344, .22], [.44, .46, .16]],
+  ];
+  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+  const unitBox = new THREE.BoxGeometry(1, 1, 1);
+  for (const [id, info, c, s] of D) {
+    const g = new THREE.Group(); g.name = 'unit:' + id; g.userData.unit = { id, ...info };
+    g.position.set(...c); scene.add(g);
+    const m = new THREE.Mesh(unitBox, hitMat); m.scale.set(Math.max(s[0], .05), Math.max(s[1], .05), Math.max(s[2], .05)); g.add(m);
+    UNITS.push(g);
+  }
+}
+const hiFill = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x38b6ff, transparent: true, opacity: .18, depthTest: false, depthWrite: false }));
+const hiEdge = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0x5cc8ff, depthTest: false, transparent: true }));
+hiFill.renderOrder = 998; hiEdge.renderOrder = 999; hiFill.visible = hiEdge.visible = false; scene.add(hiFill, hiEdge);
+const panel = document.getElementById('inspect');
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let selected = null;
+function selectUnit(g) {
+  selected = g;
+  if (!g) { panel.classList.remove('open'); hiFill.visible = hiEdge.visible = false; window.__selected = null; return; }
+  const u = g.userData.unit, sc = g.children[0].scale;
+  for (const o of [hiFill, hiEdge]) { o.position.copy(g.position); o.scale.set(sc.x * 1.06 + .01, sc.y * 1.06 + .01, sc.z * 1.06 + .01); o.visible = true; }
+  panel.querySelector('.body').innerHTML = `<h3>${esc(u.name)}</h3><div class="mdl">${esc(u.model)}</div>
+    <dl><dt>What it does</dt><dd>${esc(u.what)}</dd><dt>Where it sits</dt><dd>${esc(u.flow)}</dd>
+    <dt>Vendor</dt><dd>${esc(u.vendor)}</dd><dt>Price</dt><dd class="pr">${esc(u.price)}</dd></dl>`;
+  panel.classList.add('open'); panel.scrollTop = 0; window.__selected = u.id;
+}
+panel.querySelector('.x').addEventListener('click', e => { e.stopPropagation(); selectUnit(null); });
+window.addEventListener('keydown', e => { if (e.key === 'Escape') selectUnit(null); });
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function pick(cx, cy) {
+  const r = renderer.domElement.getBoundingClientRect();
+  ndc.set((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const h = ray.intersectObjects(UNITS, true)[0];
+  let o = h && h.object; while (o && !o.userData.unit) o = o.parent;   // climb to the unit group
+  return o || null;
+}
+{ // tap = pointer down/up with little movement, one finger, short duration (orbit drags never select)
+  const el = renderer.domElement, downs = new Map(); let multi = false;
+  el.addEventListener('pointerdown', e => { downs.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now() }); if (downs.size > 1) multi = true; });
+  const up = e => {
+    const d = downs.get(e.pointerId); downs.delete(e.pointerId);
+    const wasMulti = multi; if (!downs.size) multi = false;
+    if (!d || wasMulti || e.type === 'pointercancel') return;
+    const tol = e.pointerType === 'touch' ? 10 : 5;
+    if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > tol || performance.now() - d.t > 700) return;
+    selectUnit(pick(e.clientX, e.clientY));
+  };
+  el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+}
+window.selectUnitById = id => { const g = UNITS.find(u => u.userData.unit.id === id); selectUnit(g || null); return !!g; };
+window.focusUnit = id => { const g = UNITS.find(u => u.userData.unit.id === id); if (!g) return false; const sc = g.children[0].scale, d = Math.max(.5, Math.max(sc.x, sc.y) * 2.6 / Math.min(1, camera.aspect));
+  controls.target.copy(g.position); camera.position.set(g.position.x, g.position.y + d * .12, g.position.z + d); controls.update(); curView = null; renderFrame(); return true; };
+window.unitIds = () => UNITS.map(u => u.userData.unit.id);
+window.unitScreen = id => { const g = UNITS.find(u => u.userData.unit.id === id); if (!g) return null; const v = g.position.clone().project(camera); const r = renderer.domElement.getBoundingClientRect(); return [r.left + (v.x * .5 + .5) * r.width, r.top + (-v.y * .5 + .5) * r.height]; };
 const hp = new URLSearchParams(location.hash.slice(1));
 window.setView(VIEWS[hp.get('view')] ? hp.get('view') : 'front');
 if (hp.get('labels') === '0') setLabels(false);
