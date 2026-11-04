@@ -962,7 +962,7 @@ label('Shelly Plug US Gen4', 'UV power monitor', [5.62, 1.915, .1], 'elec minor'
 // conduit run along the top of the backboard with junction boxes
 const CY = 2.25, CZ = .0275, JB = [1.15, 2.35, 3.2, 4.1, 5.25, 6.5];
 seg(scene, V(1.0, CY, CZ), V(7.38, CY, CZ), .0133, M.conduit, 16);
-sph(scene, .016, M.conduit, 7.38, CY, CZ); seg(scene, V(7.38, CY, CZ), V(7.38, 2.15, CZ), .0133, M.conduit, 16);
+sph(scene, .016, M.conduit, 7.38, CY, CZ); seg(scene, V(7.38, CY, CZ), V(7.38, 1.894, CZ), .0133, M.conduit, 16);
 cx(scene, .016, .02, M.conduit, .99, CY, CZ, 16);
 for (let x = 1.4; x < 7.3; x += .6) { bx(scene, .012, .036, .004, M.galv, x, CY, CZ + .014); }
 for (const x of JB) { bx(scene, .1, .1, .052, M.pvcGray, x, CY, .026); bx(scene, .106, .106, .006, M.conduit, x, CY, .055); }
@@ -984,104 +984,130 @@ for (const [x, z, n] of [[2.45, .66, 'Shelly Flood · train'], [4.62, .26, 'Shel
   label(n, '', [x, .07, z], 'elec minor');
 }
 
-/* ------------------------------------------------------------------ controls DIN enclosure */
+/* ------------------------------------------------------------------ controls enclosure (WW-OSPRINK-v1): NEMA 4X 20x16x8 in, door open */
 {
-  const E = new THREE.Group(); E.position.set(7.5, 1.85, 0); scene.add(E);
-  const W = .6, H = .6, D = .2;
-  bx(E, W, H, .004, M.encl, 0, 0, .002);
-  for (const s of [-1, 1]) { bx(E, .008, H, D, M.encl, s * (W / 2 - .004), 0, D / 2); bx(E, W, .008, D, M.encl, 0, s * (H / 2 - .004), D / 2); }
-  for (const s of [-1, 1]) { bx(E, W, .03, .012, M.encl, 0, s * (H / 2 - .015), D + .006); bx(E, .03, H, .012, M.encl, s * (W / 2 - .015), 0, D + .006); }
-  mk(new THREE.PlaneGeometry(W - .06, H - .06), M.poly, E, [0, 0, D + .009]);
-  for (const y of [-.2, .2]) { cz(E, .006, .02, M.black, -W / 2 + .004, y, D, 12); rb(E, .016, .03, .01, .003, M.black, W / 2 - .012, y, D + .016); }
-  decal(E, labelTex(384, 96, '#1d1f22', [{ t: 'WATER CONTROLS', c: '#fff', f: 'bold 34px Arial', y: 34 }, { t: '24 VDC · 5 VDC · 120 VAC', c: '#ccc', f: '24px Arial', y: 70 }]), .14, .035, .17, H / 2 - .015, D + .0125);
-  bx(E, W - .05, H - .05, .003, M.backplate, 0, 0, .0055);
-  for (const y of [.17, .0, -.17]) bx(E, .52, .035, .0075, M.steel, 0, y, .0105);
-  for (const y of [.088, -.082]) bx(E, .52, .034, .042, M.duct, 0, y, .028);
-  bx(E, .034, .5, .042, M.duct, -.26, 0, .028);
-  const dev = (w, h, d, mat, x, y, r = .003) => rb(E, w, h, d, r, mat, x, y, .014 + d / 2);
-  // row 1: HDR-60-24, HDR-15-5, fuse, ZL-RLS1-24, Shelly 1 Gen4, terminals
-  dev(.0525, .09, .055, M.meanwell, -.2, .17);
-  decal(E, labelTex(128, 192, '#d0d2d1', [{ t: 'MEAN WELL', c: '#123', f: 'bold 18px Arial', y: 30 }, { t: 'HDR-60-24', c: '#111', f: 'bold 20px Arial', y: 70 }, { t: '24V 2.5A', c: '#333', f: '16px Arial', y: 100 }]), .045, .065, -.2, .17, .0698);
-  cz(E, .0025, .002, M.ledG, -.185, .205, .07, 8);
-  dev(.0178, .09, .055, M.meanwell, -.16, .17);
-  decal(E, labelTex(64, 192, '#d0d2d1', [{ t: '5V', c: '#111', f: 'bold 20px Arial', y: 70 }]), .015, .065, -.16, .17, .0698);
-  cz(E, .002, .002, M.ledG, -.16, .205, .07, 8);
-  dev(.018, .07, .05, M.black, -.137, .17);
-  dev(.025, .075, .06, std({ color: 0x3a3f44, roughness: .5 }), -.11, .17);
-  rb(E, .016, .022, .014, .002, std({ color: 0x1a4e8a, roughness: .4 }), -.11, .18, .085);
-  dev(.042, .042, .03, M.black, -.068, .17, .006);
-  decal(E, labelTex(128, 64, null, [{ t: 'Shelly', c: '#fff', f: 'bold 32px Arial', y: 32 }]), .03, .015, -.068, .175, .0445, 0, 0, true);
-  for (let i = 0; i < 26; i++) dev(.0058, .05, .04, i % 6 === 5 ? std({ color: 0x2a62c9, roughness: .5 }) : std({ color: 0x9da2a6, roughness: .5 }), -.035 + i * .0062, .17, .001);
-  for (let i = 0; i < 4; i++) cx(E, .0022, .012, M.black, -.03 + i * .02, .195, .062, 8);   // 1N4007s on terminals
-  // row 2: ESP32 DevKitC + 2x ADS1115 + NOYITO + divider board on DIN carriers
-  dev(.11, .068, .008, std({ color: 0x5d6166, roughness: .6 }), -.17, .005);
-  bx(E, .055, .028, .0016, M.pcbBlack, -.17, .005, .0235); bx(E, .018, .016, .003, M.ss, -.188, .005, .026); bx(E, .008, .007, .003, M.ss, -.14, .005, .026);
-  for (const s of [-1, 1]) bx(E, .046, .0025, .006, M.black, -.168, .005 + s * .011, .027);
-  dev(.10, .06, .008, std({ color: 0x5d6166, roughness: .6 }), -.05, .005);
-  for (const x of [-.075, -.04]) { bx(E, .028, .018, .0016, M.pcbBlue, x, .012, .0235); bx(E, .024, .002, .004, M.black, x, .0025, .025); }
-  bx(E, .04, .03, .0016, M.pcbGreen, -.025, -.01, .0235);
-  cy(E, .003, .004, M.cableBlue, -.03, -.005, .026, 8).rotation.x = PI / 2;
-  dev(.07, .055, .008, std({ color: 0x5d6166, roughness: .6 }), .07, .005);
-  bx(E, .06, .045, .0016, M.pcbGreen, .07, .005, .0235);
-  for (let i = 0; i < 10; i++) cx(E, .0012, .006, std({ color: 0xc9b48a, roughness: .5 }), .048 + (i % 5) * .011, -.006 + Math.floor(i / 5) * .02, .025, 6);
-  for (let i = 0; i < 8; i++) dev(.0058, .045, .036, std({ color: 0x9da2a6, roughness: .5 }), .14 + i * .0062, .005, .001);
-  // row 3: HA Green + terminals
-  rb(E, .112, .112, .032, .014, M.haGreen, .13, -.19, .036);
-  cz(E, .003, .002, M.ledG, .17, -.15, .0525, 8);
-  decal(E, labelTex(128, 128, null, [{ t: '⌂', c: '#2fbf6e', f: 'bold 72px Arial', y: 60 }]), .03, .03, .13, -.19, .0525, 0, 0, true);
-  for (let i = 0; i < 14; i++) dev(.0058, .05, .04, std({ color: i < 7 ? 0x9da2a6 : 0xd8b23a, roughness: .5 }), -.21 + i * .0062, -.17, .001);
-  dev(.05, .06, .04, std({ color: 0x2b2b2b, roughness: .5 }), -.07, -.17);
+  const EX = 7.5, EY = 1.64;            // centre; top ≈ 1.89 m, bottom ≈ 1.39 m (eye-level service height)
+  const E = new THREE.Group(); E.position.set(EX, EY, 0); scene.add(E);
+  const W = .406, H = .508, D = .203;   // 16 W × 20 H × 8 D in
+  const grey = std({ color: 0x9ea4a9, roughness: .42, metalness: .2 });
+  bx(E, W, H, .004, grey, 0, 0, .002);
+  for (const s of [-1, 1]) { bx(E, .006, H, D, grey, s * (W / 2 - .003), 0, D / 2); bx(E, W, .006, D, grey, 0, s * (H / 2 - .003), D / 2); }
+  for (const s of [-1, 1]) { bx(E, W, .016, .008, grey, 0, s * (H / 2 - .008), D); bx(E, .016, H, .008, grey, s * (W / 2 - .008), 0, D); }
+  for (const s of [-1, 1]) for (const t of [-1, 1]) bx(E, .03, .03, .012, grey, s * (W / 2 + .012), t * (H / 2 - .04), .006);   // mounting feet
+  decal(E, labelTex(384, 96, '#2b2f33', [{ t: 'WATER + IRRIGATION CONTROLS', c: '#fff', f: 'bold 26px Arial', y: 34 }, { t: 'NEMA 4X · 24 VDC · 24 VAC · 5 VDC · 120 VAC', c: '#ccc', f: '20px Arial', y: 70 }]), .16, .04, 0, H / 2 + .024, D - .02);
+  // hinged door (left hinge), swung open ~110°, semi-transparent so the inside stays visible from any angle
+  const door = new THREE.Group(); door.position.set(-W / 2, 0, D + .006); door.rotation.y = -1.92; E.add(door);
+  const doorMat = std({ color: 0x9ea4a9, roughness: .4, metalness: .2, transparent: true, opacity: .38, depthWrite: false, side: THREE.DoubleSide });
+  bx(door, W, H, .004, doorMat, W / 2, 0, 0);
+  for (const s of [-1, 1]) { bx(door, W, .012, .014, grey, W / 2, s * (H / 2 - .006), -.007); bx(door, .012, H, .014, grey, s * (W / 2 - .006) + W / 2, 0, -.007); }
+  bx(door, W - .03, H - .03, .004, std({ color: 0x202224, roughness: .8 }), W / 2, 0, -.004).material.visible = false;
+  for (const y of [-.18, .18]) cy(E, .006, .05, M.black, -W / 2, y, D + .006, 12);   // hinges
+  for (const y of [-.16, .16]) rb(door, .03, .04, .012, .004, M.black, W - .02, y, .008);   // quarter-turn latches
+  bx(E, W - .04, H - .04, .003, M.backplate, 0, 0, .0055);
+  const RAILS = [.175, .06], dev = (w, h, d, mat, x, y, r = .003) => rb(E, w, h, d, r, mat, x, y, .014 + d / 2);
+  for (const y of RAILS) bx(E, .36, .035, .0075, M.steel, 0, y, .0105);
+  bx(E, .36, .022, .042, M.duct, 0, .118, .028); bx(E, .36, .016, .042, M.duct, 0, -.006, .028);
+  bx(E, .016, .36, .042, M.duct, -.187, .05, .028);
+  // DIN rail 1: HDR-60-24, HDR-15-5, fuse, ZL-RLS1-24, Shelly 1 Gen4, terminal blocks
+  dev(.0525, .09, .055, M.meanwell, -.145, .175);
+  decal(E, labelTex(128, 192, '#d0d2d1', [{ t: 'MEAN WELL', c: '#123', f: 'bold 18px Arial', y: 30 }, { t: 'HDR-60-24', c: '#111', f: 'bold 20px Arial', y: 70 }, { t: '24V 2.5A', c: '#333', f: '16px Arial', y: 100 }]), .045, .065, -.145, .175, .0698);
+  cz(E, .0025, .002, M.ledG, -.13, .21, .07, 8);
+  dev(.0178, .09, .055, M.meanwell, -.107, .175);
+  decal(E, labelTex(64, 192, '#d0d2d1', [{ t: 'HDR', c: '#111', f: 'bold 16px Arial', y: 40 }, { t: '15-5', c: '#111', f: 'bold 16px Arial', y: 70 }, { t: '5V', c: '#111', f: 'bold 20px Arial', y: 110 }]), .015, .065, -.107, .175, .0698);
+  cz(E, .002, .002, M.ledG, -.107, .21, .07, 8);
+  dev(.018, .07, .05, M.black, -.087, .175);
+  dev(.025, .075, .06, std({ color: 0x3a3f44, roughness: .5 }), -.063, .175);
+  rb(E, .016, .022, .014, .002, std({ color: 0x1a4e8a, roughness: .4 }), -.063, .185, .085);
+  dev(.042, .042, .03, M.black, -.025, .175, .006);
+  decal(E, labelTex(128, 64, null, [{ t: 'Shelly', c: '#fff', f: 'bold 32px Arial', y: 32 }]), .03, .015, -.025, .18, .0445, 0, 0, true);
+  for (let i = 0; i < 26; i++) dev(.0058, .05, .04, i % 6 === 5 ? std({ color: 0x2a62c9, roughness: .5 }) : std({ color: 0x9da2a6, roughness: .5 }), .008 + i * .0062, .175, .001);
+  for (let i = 0; i < 4; i++) cx(E, .0022, .012, M.black, .013 + i * .02, .2, .062, 8);
+  // DIN rail 2: ESP32 DevKitC + 2x ADS1115 + NOYITO + divider board on DIN carriers
+  dev(.11, .068, .008, std({ color: 0x5d6166, roughness: .6 }), -.12, .06);
+  bx(E, .055, .028, .0016, M.pcbBlack, -.12, .06, .0235); bx(E, .018, .016, .003, M.ss, -.138, .06, .026); bx(E, .008, .007, .003, M.ss, -.09, .06, .026);
+  for (const s of [-1, 1]) bx(E, .046, .0025, .006, M.black, -.118, .06 + s * .011, .027);
+  dev(.10, .06, .008, std({ color: 0x5d6166, roughness: .6 }), 0, .06);
+  for (const x of [-.025, .01]) { bx(E, .028, .018, .0016, M.pcbBlue, x, .067, .0235); bx(E, .024, .002, .004, M.black, x, .0575, .025); }
+  bx(E, .04, .03, .0016, M.pcbGreen, .025, .045, .0235);
+  dev(.07, .055, .008, std({ color: 0x5d6166, roughness: .6 }), .095, .06);
+  bx(E, .06, .045, .0016, M.pcbGreen, .095, .06, .0235);
+  for (let i = 0; i < 10; i++) cx(E, .0012, .006, std({ color: 0xc9b48a, roughness: .5 }), .073 + (i % 5) * .011, .049 + Math.floor(i / 5) * .02, .025, 6);
+  for (let i = 0; i < 6; i++) dev(.0058, .045, .036, std({ color: 0x9da2a6, roughness: .5 }), .145 + i * .0062, .06, .001);
+  // backplate row 3: OpenSprinkler 3.x (own white/grey case) + reserved expansion space + zone terminal strip
+  const OSP = [-.095, -.08];
+  rb(E, .152, .102, .038, .008, std({ color: 0xe9eae6, roughness: .5 }), OSP[0], OSP[1], .0245);
+  rb(E, .146, .03, .006, .003, std({ color: 0xa9adb0, roughness: .5 }), OSP[0], OSP[1] - .032, .0445);
+  bx(E, .05, .022, .002, std({ color: 0x0d1a26, roughness: .2, emissive: 0x0a3050 }), OSP[0] - .03, OSP[1] + .02, .0445);
+  for (let i = 0; i < 3; i++) cz(E, .004, .004, M.knob, OSP[0] + .02 + i * .014, OSP[1] + .02, .045, 10);
+  decal(E, labelTex(192, 64, '#e9eae6', [{ t: 'OpenSprinkler', c: '#1d6f3a', f: 'bold 26px Arial', y: 28 }, { t: '3.x · 24 VAC', c: '#444', f: '18px Arial', y: 54 }]), .06, .02, OSP[0] + .035, OSP[1] - .002, .0446);
+  for (let i = 0; i < 10; i++) bx(E, .009, .01, .008, std({ color: 0x2a8a3a, roughness: .5 }), OSP[0] - .063 + i * .0125, OSP[1] - .032, .05);
+  // reserved space: dashed outline + label
+  const RX = .075, RY = -.08, RW = .15, RH = .1;
+  for (let i = 0; i < 10; i++) { const t = -RW / 2 + .0075 + i * .015; bx(E, .009, .002, .002, M.black, RX + t, RY + RH / 2, .0075); bx(E, .009, .002, .002, M.black, RX + t, RY - RH / 2, .0075); }
+  for (let i = 0; i < 7; i++) { const t = -RH / 2 + .0071 + i * .0143; bx(E, .002, .009, .002, M.black, RX - RW / 2, RY + t, .0075); bx(E, .002, .009, .002, M.black, RX + RW / 2, RY + t, .0075); }
+  decal(E, labelTex(256, 160, null, [{ t: 'RESERVED', c: '#b0281e', f: 'bold 34px Arial', y: 40 }, { t: '1–2 OpenSprinkler', c: '#222', f: '22px Arial', y: 80 }, { t: 'expansion boards', c: '#222', f: '22px Arial', y: 106 }, { t: '(16 zones each)', c: '#222', f: '22px Arial', y: 132 }]), .12, .075, RX, RY, .0075, 0, 0, true);
+  for (let i = 0; i < 12; i++) dev(.036, .0055, .03, std({ color: i % 4 === 3 ? 0x2b8a3e : 0x9da2a6, roughness: .5 }), .176, -.04 - i * .0062, .001);
+  bx(E, .007, .08, .0075, M.steel, .176, -.074, .0105);
+  decal(E, labelTex(128, 48, null, [{ t: 'ZONES', c: '#111', f: 'bold 28px Arial', y: 24 }]), .03, .011, .176, -.025, .0075, 0, 0, true);
+  // row 4: HA Green + outlet strip with 24 VAC transformer (OpenSprinkler) and HA Green 12 V adapter
+  rb(E, .112, .112, .032, .014, M.haGreen, -.12, -.19, .022);
+  cz(E, .003, .002, M.ledG, -.08, -.15, .0385, 8);
+  decal(E, labelTex(128, 128, null, [{ t: '⌂', c: '#2fbf6e', f: 'bold 72px Arial', y: 60 }]), .03, .03, -.12, -.19, .0385, 0, 0, true);
+  rb(E, .2, .042, .036, .006, M.white, .07, -.2, .0235);
+  for (let i = 0; i < 4; i++) bx(E, .016, .02, .002, std({ color: 0xcfd0cc, roughness: .5 }), .005 + i * .045, -.2, .042);
+  rb(E, .05, .066, .05, .006, M.black, .005, -.2, .066);
+  decal(E, labelTex(128, 96, null, [{ t: '24 VAC', c: '#ddd', f: 'bold 28px Arial', y: 40 }, { t: '1 A', c: '#aaa', f: '22px Arial', y: 72 }]), .034, .026, .005, -.2, .0915, 0, 0, true);
+  rb(E, .036, .05, .03, .005, M.black, .095, -.2, .056);
+  decal(E, labelTex(128, 64, null, [{ t: '12V 1A', c: '#bbb', f: 'bold 26px Arial', y: 32 }]), .024, .012, .095, -.2, .0715, 0, 0, true);
   // ---- simplified, colour-coded wiring routes (identifiable paths, NOT a verified wiring diagram)
-  // local enclosure coords; wires run in a plane just in front of the devices
-  const WZ = .079, w = (pts, mat, r = .0013) => cable(pts.map(q => V(7.5 + q[0], 1.85 + q[1], q[2] ?? WZ)), r, mat);
-  const TE = [-.12, .29, .06];          // field-wiring entry from the PVC conduit (top)
-  // 120 VAC L (black) + N (white): gland 0 → PSUs + Shelly 1 Gen4
-  for (const [mat, o] of [[M.wireBlack, 0], [M.wireWhite, .006]]) {
-    w([[o, -.29, .08], [o, -.25], [o, .088 - o], [-.2 - o, .088 - o], [-.2 - o, .118, .07]], mat);
-    w([[-.16 - o, .088 - o], [-.16 - o, .118, .07]], mat);
-    w([[-.068 - o, .088 - o], [-.068 - o, .145, .045]], mat);
+  const WZ = .079, w = (pts, mat, r = .0013) => cable(pts.map(q => V(EX + q[0], EY + q[1], q[2] ?? WZ)), r, mat);
+  const TE = [-.12, H / 2 - .01, .06];          // field-wiring entry from the PVC conduit (top)
+  const GY = -H / 2 - .011;
+  for (const [mat, o] of [[M.wireBlack, 0], [M.wireWhite, .006]]) {   // 120 VAC: gland 0 → strip, PSUs, Shelly
+    w([[o, GY + .02, .07], [o, -.13], [-.165 - o, -.006 + o], [-.165 - o, .118 - o], [-.145 - o, .125, .07]], mat);
+    w([[-.107 - o, .118 - o], [-.107 - o, .125, .07]], mat);
+    w([[-.025 - o, .118 - o], [-.025 - o, .15, .045]], mat);
+    w([[o, -.13], [.16 + o, -.16], [.165 + o, -.2, .045]], mat);
   }
-  // 24 VDC (red): HDR-60-24 → relay coil (+) and Shelly dry-contact COM; Shelly NO → leak valve via conduit
-  w([[-.2, .218, .07], [-.2, .238], [-.11, .238], [-.11, .21, .075]], M.wireRed);
-  w([[-.11, .238], [-.075, .238], [-.075, .193, .046]], M.wireRed);
-  w([[-.061, .193, .046], [-.061, .262], [-.125, .275], TE], M.wireRed);
-  // protected 5 V (orange): HDR-15-5 → fuse → ESP32 5V pin, and → transducer terminals / field
-  w([[-.155, .123, .07], [-.155, .112], [-.137, .112], [-.137, .133, .07]], M.wire5V);
-  w([[-.137, .207, .07], [-.137, .252], [-.245, .252], [-.245, .045], [-.205, .045], [-.197, .022, .028]], M.wire5V);
-  w([[-.137, .252], [-.118, .27], [-.118, .29, .06]], M.wire5V);
-  // UV interlock (violet): COMMcenter dry contact → relay coil; relay NO → UV shutoff valve
-  w([[-.127, .29, .06], [-.127, .26], [-.117, .21, .075]], M.wireUV);
-  w([[-.103, .21, .075], [-.098, .26], [-.112, .29, .06]], M.wireUV);
-  // signals (blue): transducer / pulse / reed from conduit → ADS1115s + ESP32 GPIO
-  w([[-.108, .29, .06], [-.09, .282], [-.03, .282], [-.03, .12], [-.06, .06], [-.06, .024, .026]], M.cableBlue, .0011);
-  w([[-.03, .12], [-.12, .06], [-.15, .03, .028]], M.cableBlue, .0011);
-  // HA Green: 12 V lead → gland .1, Ethernet → gland .2
-  w([[.1, -.247, .045], [.1, -.27], [.1, -.29, .08]], M.cableGray, .0022);
-  w([[.165, -.247, .045], [.19, -.265], [.2, -.29, .08]], M.cableBlue, .0028);
-  bx(E, .014, .01, .012, std({ color: 0x8a8f94, roughness: .4 }), .165, -.25, .045);   // RJ45 boot
-  // cable glands on the bottom: -.2 / -.1 spare (plugged), 0 = 120 VAC feed, .1 = HA 12 V, .2 = Ethernet
-  for (const x of [-.2, -.1, 0, .1, .2]) cy(E, .012, .022, M.black, x, -H / 2 - .011, .08, 12);
-  for (const x of [-.2, -.1]) cy(E, .008, .006, M.knob, x, -H / 2 - .025, .08, 10);
-  // outside: 120 VAC cord → plug in upper receptacle of the controls outlet
-  cable([[7.5, 1.528, .08], [7.5, 1.47, .09], [7.8, 1.43, .1], [8.05, 1.6, .095], [8.06, 1.84, .09], [8.0, 1.874, .075]], .0035, M.cableGray);
+  w([[-.145, .222, .07], [-.145, .238], [-.063, .238], [-.063, .215, .075]], M.wireRed);
+  w([[-.063, .238], [-.03, .238], [-.03, .198, .046]], M.wireRed);
+  w([[-.015, .198, .046], [-.015, .235], [-.11, .24], TE], M.wireRed);
+  w([[-.103, .128, .07], [-.103, .118], [-.087, .118], [-.087, .138, .07]], M.wire5V);
+  w([[-.087, .212, .07], [-.087, .23], [-.176, .23], [-.176, .095], [-.147, .095], [-.147, .08, .028]], M.wire5V);
+  w([[-.087, .23], [-.1, .245, .06]], M.wire5V);
+  w([[-.13, H / 2 - .01, .06], [-.125, .23], [-.07, .215, .075]], M.wireUV);
+  w([[-.056, .215, .075], [-.06, .232], [-.11, H / 2 - .01, .06]], M.wireUV);
+  w([[-.105, H / 2 - .01, .06], [-.09, .242], [-.005, .242], [-.005, .118], [-.01, .07, .026]], M.cableBlue, .0011);
+  w([[-.005, .118], [-.1, .09], [-.12, .075, .028]], M.cableBlue, .0011);
+  // 24 VAC: transformer → OpenSprinkler; zone wires → zone terminal strip → zone gland
+  w([[.005, -.165, .07], [.005, -.15], [-.06, -.14], [-.07, -.12, .045]], std({ color: 0x8a5a2b, roughness: .5 }), .0016);
+  const zc = [0xd33a2c, 0x2f6fd0, 0x2b9a48, 0xe0c22a, 0xf0f0f0, 0x6a3fa0, 0xe07a1e, 0x222222];
+  zc.forEach((c, i) => w([[OSP[0] - .055 + i * .0125, OSP[1] - .036, .05], [OSP[0] - .055 + i * .0125, -.145 - i * .001, .03], [.15, -.145 - i * .001, .03], [.16, -.04 - i * .0062, .03]], std({ color: c, roughness: .5 }), .0009));
+  w([[.192, -.04], [.198, -.1], [.195, -.2, .07], [.15, GY + .02, .08]], std({ color: 0x3c5a3c, roughness: .55 }), .0045);
+  w([[-.12, -.247, .03], [-.1, -.24, .05], [-.06, GY + .02, .08]], M.cableBlue, .0028);   // HA Ethernet → gland -.06
+  w([[.095, -.226, .05], [.05, -.235], [-.12, -.235, .05], [-.13, -.21, .03]], M.cableGray, .0018);   // 12 V lead → HA Green
+  // cable glands on the bottom: -.15 spare, -.06 Ethernet, 0 120 VAC feed, .07 spare, .15 irrigation zone bundle (larger)
+  for (const x of [-.15, -.06, 0, .07]) cy(E, .012, .022, M.black, x, GY, .08, 12);
+  for (const x of [-.15, .07]) cy(E, .008, .006, M.knob, x, GY - .014, .08, 10);
+  cy(E, .018, .026, M.black, .15, GY - .002, .08, 14);
+  // outside: irrigation zone cable stub (multi-conductor, direct-burial) toward the outside wall
+  cable([[EX + .15, EY + GY - .01, .08], [EX + .15, EY + GY - .09, .085], [EX + .25, EY + GY - .2, .08], [EX + .5, EY + GY - .24, .04], [EX + .62, EY + GY - .24, .015]], .007, std({ color: 0x2f3a2f, roughness: .6 }));
+  cx(scene, .014, .03, M.pvcGray, EX + .63, EY + GY - .24, .015, 14);
+  // outside: 120 VAC cord → plug in the controls outlet; Ethernet → network
+  cable([[EX, EY + GY - .01, .08], [EX, EY + GY - .07, .09], [7.8, 1.3, .1], [8.05, 1.5, .095], [8.06, 1.84, .09], [8.0, 1.874, .075]], .0035, M.cableGray);
   rb(scene, .03, .036, .024, .004, M.black, 7.98, 1.874, .07);
-  // outside: HA Green 12 V 1 A adapter in the lower receptacle, lead from the device gland
-  rb(scene, .046, .062, .036, .006, M.black, 7.98, 1.808, .078);
-  decal(scene, labelTex(128, 64, null, [{ t: '12V 1A', c: '#bbb', f: 'bold 26px Arial', y: 32 }]), .03, .015, 7.98, 1.80, .0965, 0, 0, true);
-  cable([[7.6, 1.528, .08], [7.6, 1.49, .085], [7.75, 1.5, .09], [7.9, 1.62, .09], [7.95, 1.74, .085], [7.98, 1.777, .08]], .0022, M.cableGray);
-  // outside: Ethernet up the wall to the joists → network switch (off-scene)
-  cable([[7.7, 1.528, .08], [7.72, 1.45, .07], [8.1, 1.42, .04], [8.24, 1.55, .03], [8.25, 1.9, .03], [8.25, 2.55, .03]], .0032, M.cableBlue);
-  for (const y of [1.7, 2.1, 2.45]) bx(scene, .016, .008, .02, M.white, 8.25, y, .03);
-  mk(new THREE.ConeGeometry(.03, .07, 16), std({ color: 0x1f62b8, roughness: .5, emissive: 0x0a2a60 }), scene, [8.25, 2.6, .03]);
-  label('Ethernet → network switch', 'continues off-scene (route TBD)', [8.25, 2.62, .05], 'elec minor');
-  label('HA Green 12 V 1 A adapter', 'included adapter · lead to HA Green via gland', [7.98, 1.76, .1], 'elec minor');
-  label('120 VAC feed cord', 'simplified · enclosure feed method TBD', [7.62, 1.43, .12], 'elec minor');
-  label('Controls DIN enclosure', 'HDR-60-24 · HDR-15-5 (fused) · ZL-RLS1-24 · wiring shown SIMPLIFIED', [7.5, 2.19, .2], 'elec');
-  label('HA Green', 'Ethernet + 12 V lead out via glands', [7.63, 1.66, .06], 'elec minor');
-  label('Protected 5 V → ESP32 5V pin', 'HDR-15-5 → fuse → ESP32 + transducers', [7.27, 1.88, .08], 'elec minor');
-  label('ZL-RLS1-24 relay', 'coil ← COMMcenter · NO → UV valve', [7.39, 2.06, .08], 'elec minor');
-  label('ESP32 + 2× ADS1115', '4.7k/10k dividers · NOYITO 4-20 mA', [7.39, 1.86, .03], 'elec minor');
-  label('Shelly 1 Gen4 UL', '120 VAC L/N in · dry contact → leak valve', [7.432, 2.04, .06], 'elec minor');
+  cable([[EX - .06, EY + GY - .01, .08], [EX - .07, EY + GY - .08, .07], [7.2, 1.25, .05], [7.12, 1.4, .03], [7.12, 2.0, .03], [7.12, 2.55, .03]], .0032, M.cableBlue);
+  for (const y of [1.6, 2.1, 2.45]) bx(scene, .016, .008, .02, M.white, 7.12, y, .03);
+  mk(new THREE.ConeGeometry(.03, .07, 16), std({ color: 0x1f62b8, roughness: .5, emissive: 0x0a2a60 }), scene, [7.12, 2.6, .03]);
+  label('Ethernet → network switch', 'continues off-scene (route TBD)', [7.12, 2.62, .05], 'elec minor');
+  label('120 VAC feed cord', 'simplified · enclosure feed method TBD', [7.7, 1.3, .12], 'elec minor');
+  label('Controls enclosure · NEMA 4X 20×16×8"', 'door shown open · wiring SIMPLIFIED', [EX, EY + H / 2 + .07, .2], 'elec');
+  label('OpenSprinkler 3.x', 'reserved · Rain Bird zones', [EX + OSP[0], EY + OSP[1] + .06, .06], 'elec minor');
+  label('Reserved: 1–2 expansion boards', '16 zones each', [EX + RX, EY + RY + .06, .03], 'elec minor');
+  label('Irrigation zone cable', '→ outside wall · Rain Bird valves', [EX + .45, EY + GY - .2, .08], 'elec minor');
+  label('HA Green', 'Ethernet + 12 V lead', [EX - .12, EY - .19, .06], 'elec minor');
+  label('ESP32 + 2× ADS1115', '4.7k/10k dividers · NOYITO 4-20 mA', [EX - .12, EY + .085, .03], 'elec minor');
+  label('ZL-RLS1-24 relay', 'coil ← COMMcenter · NO → UV valve', [EX - .063, EY + .22, .08], 'elec minor');
 }
 
 /* ------------------------------------------------------------------ kitchen RO vignette (shown for reference) */
@@ -1162,7 +1188,7 @@ const VIEWS = {
   inlet: { p: [1.7, 1.5, 2.2], t: [1.7, 1.25, .1] },
   tanks: { p: [3.6, 1.3, 2.6], t: [3.6, .95, .3] },
   uv:    { p: [6.02, 1.12, 3.05], t: [6.02, 1.06, .1] },   // reactor + complete bypass loop + top labels
-  controls: { p: [7.62, 1.8, 1.45], t: [7.62, 1.78, .05] },
+  controls: { p: [7.62, 1.66, 1.35], t: [7.52, 1.62, .08] },
   ro:    { p: [9.05, .95, 1.75], t: [9.38, .42, .1] },
 };
 const ceiling = scene.getObjectByName('ceiling');
@@ -1313,13 +1339,22 @@ const UNITS = [];
     ['uv420', S({ name: 'UV intensity interface', model: 'VIQUA 270268-R 4–20 mA signal interface', what: 'Outputs UV strength as an analogue signal so Home Assistant can trend it and warn before the lamp gets weak.', flow: 'Beside the COMMcenter; signal goes to the ESP32 via the NOYITO converter.', vendor: 'Aquatell', price: '$141.00' }), [6.84, 1.97, .02], [.08, .06, .05]],
     ['flood1', S({ name: 'Leak sensor (train)', model: 'Shelly Flood Gen4 (battery)', what: 'Sits on the floor and detects water. It tells the Shelly 1 to close the leak valve directly, even if Home Assistant is down.', flow: 'On the floor under the equipment train.', vendor: 'Shelly US', price: '$39.20 each' }), [2.45, .02, .66], [.09, .05, .09]],
     ['flood2', S({ name: 'Leak sensor (brine tank)', model: 'Shelly Flood Gen4 (battery)', what: 'Detects a brine tank or softener drain leak and triggers the leak shut-off.', flow: 'On the floor beside the brine tank.', vendor: 'Shelly US', price: '$39.20 each' }), [4.62, .02, .26], [.09, .05, .09]],
-    // controls DIN enclosure (origin 7.5, 1.85); boxes reach to the cover so a front tap hits them
-    ['hdr24', S({ name: '24 V power supply', model: 'Mean Well HDR-60-24 (24 VDC 2.5 A, DIN rail)', what: 'Powers both shut-off valve coils and the interposing relay.', flow: 'Controls box, top row; 120 VAC in, 24 VDC out to the relay and Shelly 1.', vendor: 'DigiKey', price: '$20.90' }), [7.30, 2.02, .1], [.055, .1, .2]],
-    ['hdr5', S({ name: '5 V power supply (fused)', model: 'Mean Well HDR-15-5 (5 VDC, DIN rail) + inline fuse', what: 'Clean, fused 5 V for the ESP32 and the five pressure transducers.', flow: 'Controls box, top row; 5 V to the ESP32 and taps P0–P4.', vendor: 'DigiKey', price: '$12.50' }), [7.345, 2.02, .1], [.03, .1, .2]],
-    ['relay', S({ name: 'Interposing relay', model: 'AutomationDirect ZL-RLS1-24 (24 VDC coil, SPDT 10 A)', what: 'The UV safety link: the COMMcenter’s “UV healthy” contact energises this relay, and only then does 24 V reach the UV shut-off valve.', flow: 'Controls box, top row; between the COMMcenter and the UV shut-off valve.', vendor: 'AutomationDirect', price: '$34.50' }), [7.39, 2.02, .1], [.03, .1, .2]],
-    ['shelly1', S({ name: 'Leak valve driver', model: 'Shelly 1 Gen4 UL (dry-contact relay)', what: 'Switches 24 V to the leak shut-off valve. Leak sensors turn it off directly; Home Assistant can also open/close it.', flow: 'Controls box, top row; drives the leak shut-off valve.', vendor: 'Shelly US', price: '$27.99' }), [7.432, 2.02, .1], [.045, .1, .2]],
-    ['esp32', S({ name: 'ESP32 sensor controller', model: 'ESP32-DevKitC (4-pack) + 2× ADS1115 ADC + NOYITO 4–20 mA converter + 4.7k/10k divider board', what: 'Reads the five pressure taps, the water meter pulses, the bypass reed switch and UV intensity, and sends them to Home Assistant.', flow: 'Controls box, middle row; wired to the taps, meter, reed switch and UV interface.', vendor: 'Amazon', price: '$17.99 (4-pack) + 2× $6.99 ADS1115 + $6.99 NOYITO (resistor kit unpriced)' }), [7.40, 1.855, .1], [.32, .08, .2]],
-    ['haGreen', S({ name: 'Home Assistant Green', model: 'Home Assistant Green hub (12 V adapter included)', what: 'The local smart-home brain: collects every sensor, shows dashboards, sends alerts and runs the automations — no cloud needed.', flow: 'Controls box, bottom row; Ethernet to the network.', vendor: 'CloudFree', price: '$198.85' }), [7.63, 1.66, .1], [.12, .12, .2]],
+    // controls enclosure (origin 7.5, 1.64); boxes reach to the cover so a front tap hits them
+    ['hdr24', S({ name: '24 V power supply', model: 'Mean Well HDR-60-24 (24 VDC 2.5 A, DIN rail)', what: 'Powers both shut-off valve coils and the interposing relay.', flow: 'Controls box, top row; 120 VAC in, 24 VDC out to the relay and Shelly 1.', vendor: 'DigiKey', price: '$20.90' }), [7.355, 1.815, 0.1], [0.055, 0.1, 0.2]],
+    ['hdr5', S({ name: '5 V power supply (fused)', model: 'Mean Well HDR-15-5 (5 VDC, DIN rail) + inline fuse', what: 'Clean, fused 5 V for the ESP32 and the five pressure transducers.', flow: 'Controls box, top row; 5 V to the ESP32 and taps P0–P4.', vendor: 'DigiKey', price: '$12.50' }), [7.393, 1.815, 0.1], [0.02, 0.1, 0.2]],
+    ['relay', S({ name: 'Interposing relay', model: 'AutomationDirect ZL-RLS1-24 (24 VDC coil, SPDT 10 A)', what: 'The UV safety link: the COMMcenter’s “UV healthy” contact energises this relay, and only then does 24 V reach the UV shut-off valve.', flow: 'Controls box, top row; between the COMMcenter and the UV shut-off valve.', vendor: 'AutomationDirect', price: '$34.50' }), [7.437, 1.815, 0.1], [0.027, 0.1, 0.2]],
+    ['shelly1', S({ name: 'Leak valve driver', model: 'Shelly 1 Gen4 UL (dry-contact relay)', what: 'Switches 24 V to the leak shut-off valve. Leak sensors turn it off directly; Home Assistant can also open/close it.', flow: 'Controls box, top row; drives the leak shut-off valve.', vendor: 'Shelly US', price: '$27.99' }), [7.475, 1.815, 0.1], [0.045, 0.1, 0.2]],
+    ['esp32', S({ name: 'ESP32 sensor controller', model: 'ESP32-DevKitC (4-pack) + 2× ADS1115 ADC + NOYITO 4–20 mA converter + 4.7k/10k divider board', what: 'Reads the five pressure taps, the water meter pulses, the bypass reed switch and UV intensity, and sends them to Home Assistant.', flow: 'Controls box, middle row; wired to the taps, meter, reed switch and UV interface.', vendor: 'Amazon', price: '$17.99 (4-pack) + 2× $6.99 ADS1115 + $6.99 NOYITO (resistor kit unpriced)' }), [7.450, 1.700, 0.1], [0.27, 0.075, 0.2]],
+    ['haGreen', S({ name: 'Home Assistant Green', model: 'Home Assistant Green hub (12 V adapter included)', what: 'The local smart-home brain: collects every sensor, shows dashboards, sends alerts and runs the automations — no cloud needed.', flow: 'Controls enclosure, bottom-left on the backplate; Ethernet out the bottom gland to the network.', vendor: 'CloudFree', price: '$198.85' }), [7.380, 1.450, 0.1], [0.12, 0.12, 0.2]],
+    ['enclosure', S({ name: 'Controls enclosure (NEMA 4X)', model: 'NEMA 4X grey enclosure · 20 × 16 × 8 in · hinged door + backplate (door shown open)', what: 'Weather- and splash-proof box that holds all the low-voltage controls: power supplies, relays, ESP32, Home Assistant Green and the OpenSprinkler irrigation controller.', flow: 'Wall-mounted beside the UV electronics, top ≈ 1.9 m, bottom ≈ 1.4 m; conduit enters the top, cables exit through bottom glands.', vendor: 'AutomationDirect — not yet carted', price: '≈ $200–350 (estimate)' }), [7.222, 1.640, .40], [.16, .51, .38]],
+    ['dinTerm', S({ name: 'DIN terminal blocks', model: 'DIN-rail feed-through terminal blocks (grey + blue, with 1N4007 flyback diodes)', what: 'Neat landing points for the 24 V valve, 5 V transducer and signal wires coming down the conduit.', flow: 'Controls enclosure, top DIN rail, right of the Shelly 1.', vendor: 'AutomationDirect', price: 'Price not verified' }), [7.587, 1.815, 0.1], [0.165, 0.06, 0.2]],
+    ['opensprinkler', S({ name: 'OpenSprinkler 3.x irrigation controller', model: 'OpenSprinkler 3.x · ~6 × 4 × 1.5 in own case · 24 VAC · 8 zones base, expandable to 72', what: 'Wi-Fi sprinkler controller that runs the landscaper-installed Rain Bird zone valves and integrates with Home Assistant. Not purchased — space reserved only.', flow: 'Controls enclosure backplate, below the ESP32 rail; zone wires go to the zone terminal strip.', vendor: 'OpenSprinkler (not purchased)', price: '≈ $150–250 (estimate)' }), [7.405, 1.560, 0.06], [0.155, 0.105, 0.08]],
+    ['ospExp', S({ name: 'Reserved: OpenSprinkler expansion', model: 'Space for 1–2 OpenSprinkler expansion boards (16 zones each)', what: 'Empty, labelled backplate space so up to 32 more irrigation zones can be added later without a new box.', flow: 'Controls enclosure backplate, right of the OpenSprinkler.', vendor: 'OpenSprinkler (not purchased)', price: 'Not purchased' }), [7.575, 1.560, 0.03], [0.15, 0.1, 0.05]],
+    ['zoneTerm', S({ name: 'Irrigation zone terminal strip', model: 'DIN terminal blocks for zone wires + common (green = common)', what: 'Joins the OpenSprinkler zone outputs to the multi-conductor irrigation cable, so the controller can be swapped without re-pulling field wire.', flow: 'Controls enclosure, right edge of the backplate; down to the zone-cable gland.', vendor: 'AutomationDirect', price: 'Price not verified' }), [7.676, 1.566, 0.06], [0.04, 0.08, 0.1]],
+    ['outletStrip', S({ name: 'Outlet strip (inside enclosure)', model: '4-outlet 120 VAC strip on the backplate', what: 'Powers the plug-in adapters inside the box: the OpenSprinkler 24 VAC transformer and the HA Green 12 V adapter.', flow: 'Controls enclosure, bottom row; fed from the 120 VAC gland.', vendor: 'TBD', price: 'Price not verified' }), [7.570, 1.440, 0.04], [0.2, 0.045, 0.07]],
+    ['xfmr24', S({ name: '24 VAC plug-in transformer', model: '24 VAC ~1 A wall transformer (OpenSprinkler power)', what: 'Steps 120 VAC down to the 24 VAC the OpenSprinkler and Rain Bird solenoid valves need.', flow: 'Plugged into the outlet strip; low-voltage lead to the OpenSprinkler.', vendor: 'Usually bundled with OpenSprinkler', price: 'Typically included' }), [7.505, 1.440, 0.07], [0.055, 0.07, 0.06]],
+    ['zoneGland', S({ name: 'Zone-wire cable gland', model: 'Large NEMA 4X cable gland (bottom of enclosure)', what: 'Seals around the irrigation zone-wire bundle where it leaves the box, keeping the enclosure watertight.', flow: 'Bottom of the controls enclosure, right side.', vendor: 'AutomationDirect', price: 'Price not verified' }), [7.650, 1.373, 0.08], [0.04, 0.04, 0.05]],
+    ['zoneCable', S({ name: 'Irrigation zone cable (stub)', model: 'Multi-conductor direct-burial sprinkler cable (e.g. 18 AWG, 7–13 conductor)', what: 'Carries each zone wire plus common out to the landscaper-installed Rain Bird valves.', flow: 'From the zone gland, along the wall to a sleeve through the outside wall.', vendor: 'TBD', price: 'Price not verified' }), [7.880, 1.216, .06], [.5, .2, .1]],
     ['ro', S({ name: 'Kitchen reverse-osmosis system', model: 'Frizzlife PD600-TAM3 tankless RO (replaces the Aquasana)', what: 'Under-sink drinking-water filter that removes dissolved solids; the screen shows water quality (TDS).', flow: 'At the kitchen sink, fed from the treated house supply (after everything on this wall).', vendor: 'Amazon', price: '$399.49' }), [9.20, .344, .22], [.44, .46, .16]],
   ];
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
