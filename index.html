@@ -80,9 +80,9 @@
     <span style="color:#8d98a3;margin:0 4px">detail:</span><button data-view="inlet">Inlet</button><button data-view="tanks">Tanks</button><button data-view="uv">UV</button><button data-view="controls">Controls</button><button data-view="ro">RO</button>
   </div>
   <div id="note"><b>⚠ ILLUSTRATIVE SITE LAYOUT — NOT FIELD-APPROVED.</b> <span class="long">Equipment sizes follow the specified products.
-    Wall/backboard length, header and tank heights, tank positions, brine tank size (<b>18×40 is provisional</b>),
+    Wall/backboard length, header and tank heights, tank positions, brine tank (18×33, ships with the 64K softener),
     drain sizes/locations and outlet/enclosure positions are illustrative — <b>TBD per plan</b> (plan elevation is not to scale).
-    Wiring is simplified, not a wiring diagram.</span><span class="short">Site geometry, 18×40 brine size, drains &amp; outlets TBD per plan · wiring simplified.</span></div>
+    Wiring is simplified, not a wiring diagram.</span><span class="short">Site geometry, drains &amp; outlets TBD per plan · wiring simplified.</span></div>
 </div>
 <div id="fail"></div>
 <div id="legend">
@@ -675,34 +675,36 @@ function neoflo() {
 }
 
 /* ------------------------------------------------------------------ vessels */
-function mineralTank(x, z, mat, sticker, opts) {   // 10x54 FRP tank + Clack WS1 head + 1" bypass
+function mineralTank(x, z, mat, sticker, opts) {   // 10x54 default; opts.r/opts.dy for 12x48 FRP tank + Clack WS1 head + 1" bypass
+  const R = (opts && opts.r) || .127, k = R / .127, DY = (opts && opts.dy) || 0;
   const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
   cy(g, .138, .11, M.blackMatte, 0, .055, 0, 40);
-  for (let i = 0; i < 12; i++) { const a = i / 12 * 2 * PI; bx(g, .01, .1, .012, M.blackMatte, Math.sin(a) * .139, .05, Math.cos(a) * .139).rotation.y = a; }
+  lathe(g, [[0, .06], [.08 * k, .062], [.115 * k, .08], [R, .12], [R, 1.28 - DY], [.118 * k, 1.33 - DY], [.09, 1.36 - DY], [.05, 1.375 - DY], [.045, 1.395 - DY]], mat, 56);
   lathe(g, [[0, .06], [.08, .062], [.115, .08], [.127, .12], [.127, 1.28], [.118, 1.33], [.09, 1.36], [.05, 1.375], [.045, 1.395]], mat, 56);
-  cylDecal(g, sticker, .1282, .30, 1.3, .95);
+  const h = new THREE.Group(); h.position.y = -DY; g.add(h);
+  cylDecal(h, sticker, .1282, .30, 1.3, .95);
   // Clack WS1 head
-  cy(g, .056, .07, M.black, 0, 1.425, 0, 32);
-  rb(g, .19, .21, .17, .022, M.black, 0, 1.53, 0);
-  rb(g, .172, .17, .02, .016, M.knob, 0, 1.54, .088);
-  decal(g, lcdTex(opts.lcd), .07, .035, 0, 1.575, .0985);
+  cy(h, .056, .07, M.black, 0, 1.425, 0, 32);
+  rb(h, .19, .21, .17, .022, M.black, 0, 1.53, 0);
+  rb(h, .172, .17, .02, .016, M.knob, 0, 1.54, .088);
+  decal(h, lcdTex(opts.lcd), .07, .035, 0, 1.575, .0985);
   mk(new THREE.PlaneGeometry(.07, .035), std({ color: 0x000000, emissive: 0x9fb58e, emissiveIntensity: .25, transparent: true, opacity: .25 }), g, [0, 1.575, .0987]);
-  for (const s of [-1, 0, 1]) cz(g, .0065, .006, M.black, s * .03, 1.53, .1, 16);
-  decal(g, labelTex(192, 48, null, [{ t: 'Clack', c: '#e8e8e8', f: 'italic bold 34px Arial', y: 24 }]), .05, .0125, 0, 1.496, .0985, 0, 0, true);
-  rb(g, .17, .062, .07, .01, M.black, 0, 1.5, -.12);          // WS1 1" bypass
+  for (const s of [-1, 0, 1]) cz(h, .0065, .006, M.black, s * .03, 1.53, .1, 16);
+  decal(h, labelTex(192, 48, null, [{ t: 'Clack', c: '#e8e8e8', f: 'italic bold 34px Arial', y: 24 }]), .05, .0125, 0, 1.496, .0985, 0, 0, true);
+  rb(h, .17, .062, .07, .01, M.black, 0, 1.5, -.12);          // WS1 1" bypass
   for (const s of [-1, 1]) {
-    cy(g, .022, .026, M.knob, s * .045, 1.543, -.12, 24);
-    bx(g, .032, .006, .008, M.knob, s * .045, 1.557, -.12);
-    cz(g, .02, .04, M.black, s * .05, 1.5, -.175, 24);
-    cz(g, .026, .022, M.black, s * .05, 1.5, -.19, 12);
-    cz(g, .018, .03, M.brass, s * .05, 1.5, -.215, 24);
+    cy(h, .022, .026, M.knob, s * .045, 1.543, -.12, 24);
+    bx(h, .032, .006, .008, M.knob, s * .045, 1.557, -.12);
+    cz(h, .02, .04, M.black, s * .05, 1.5, -.175, 24);
+    cz(h, .026, .022, M.black, s * .05, 1.5, -.19, 12);
+    cz(h, .018, .03, M.brass, s * .05, 1.5, -.215, 24);
   }
   // drain elbow (right side) + power lead
-  cx(g, .011, .03, M.black, .108, 1.47, .02, 16);
-  sph(g, .012, M.black, .123, 1.47, .02);
-  if (opts.brine) { cx(g, .007, .025, M.black, .105, 1.44, -.04, 12); }
-  cz(g, .006, .02, M.black, -.06, 1.6, -.09, 10);
-  if (opts.vent) { cy(g, .012, .03, M.white, .06, 1.645, -.04, 16); cy(g, .016, .01, M.white, .06, 1.663, -.04, 16); }
+  cx(h, .011, .03, M.black, .108, 1.47, .02, 16);
+  sph(h, .012, M.black, .123, 1.47, .02);
+  if (opts.brine) { cx(h, .007, .025, M.black, .105, 1.44, -.04, 12); }
+  cz(h, .006, .02, M.black, -.06, 1.6, -.09, 10);
+  if (opts.vent) { cy(h, .012, .03, M.white, .06, 1.645, -.04, 16); cy(h, .016, .01, M.white, .06, 1.663, -.04, 16); }
   return g;
 }
 
@@ -779,7 +781,7 @@ place(ballValve(), 2.48, HY, PZ);
 hpex(1.13, 1.19); hpex(1.25, 1.31); hpex(1.69, 1.745); hpex(1.855, 1.87); hpex(2.19, 2.27); hpex(2.39, 2.425);
 
 /* --- Atmos-AIO iron filter ------------------------------------------- */
-const AIO_X = 2.95, SOFT_X = 3.80, TZ = .55;
+const AIO_X = 2.95, SOFT_X = 3.80, TZ = .55, SOFT_R = .1524, SOFT_DY = .152;   // softener 12x48 (12 in dia, 48 in body)
 mineralTank(AIO_X, TZ, M.tankBlue,
   labelTex(512, 360, '#f4f4f2', [{ t: 'AQUATELL', c: '#14457e', f: 'bold 58px Arial', y: 62 }, { t: 'ATMOS-AIO', c: '#111', f: 'bold 54px Arial', y: 130 }, { t: 'Air-injection iron / sulphur filter', c: '#333', f: '28px Arial', y: 190 }, { t: '10×54 · Katalox Light · Clack WS1', c: '#333', f: '28px Arial', y: 236 }, { t: 'Backwash ≈ 6.5 gpm', c: '#a01', f: 'bold 28px Arial', y: 296 }], '#14457e'),
   { lcd: ['12:00 PM', 'AIO  SVC'], vent: true });
@@ -796,13 +798,13 @@ hpex(3.18, 3.24);
 
 /* --- softener + brine tank ------------------------------------------- */
 mineralTank(SOFT_X, TZ, M.tankBlack,
-  labelTex(512, 300, '#f4f4f2', [{ t: 'AquaHome', c: '#0f6aa5', f: 'bold 60px Arial', y: 66 }, { t: '48,000 GRAIN SOFTENER', c: '#111', f: 'bold 36px Arial', y: 136 }, { t: 'Clack WS1 · 10×54 · 1.5 ft³ · 8% resin', c: '#333', f: '27px Arial', y: 196 }, { t: 'program on POST-AIO hardness', c: '#a01', f: 'bold 25px Arial', y: 250 }], '#0f6aa5'),
-  { lcd: ['12:00 PM', 'CAP 46.2K'], brine: true });
-pex([[3.30, HY, PZ], [SOFT_X - .05, HY, PZ], [SOFT_X - .05, HY, .25]]);
-place(union(), SOFT_X - .05, HY, .285, 0, PI / 2);
-place(union(), SOFT_X + .05, HY, .285, 0, PI / 2);
-pex([[SOFT_X + .05, HY, .25], [SOFT_X + .05, HY, PZ], [4.02, HY, PZ]]);
-label('AquaHome 48K softener', 'Clack WS1 · 10×54', [SOFT_X, 1.72, TZ], '');
+  labelTex(512, 300, '#f4f4f2', [{ t: 'AquaHome', c: '#0f6aa5', f: 'bold 60px Arial', y: 66 }, { t: '64,000 GRAIN SOFTENER', c: '#111', f: 'bold 36px Arial', y: 136 }, { t: 'Clack WS1 · 12×48 · 2.0 ft³ · 8% resin', c: '#333', f: '27px Arial', y: 196 }, { t: 'program on POST-AIO hardness', c: '#a01', f: 'bold 25px Arial', y: 250 }], '#0f6aa5'),
+  { lcd: ['12:00 PM', 'CAP 62.0K'], brine: true, r: SOFT_R, dy: SOFT_DY });
+pex([[3.30, HY, PZ], [SOFT_X - .05, HY, PZ], [SOFT_X - .05, HY - SOFT_DY, PZ], [SOFT_X - .05, HY - SOFT_DY, .25]]);
+place(union(), SOFT_X - .05, HY - SOFT_DY, .285, 0, PI / 2);
+place(union(), SOFT_X + .05, HY - SOFT_DY, .285, 0, PI / 2);
+pex([[SOFT_X + .05, HY - SOFT_DY, .25], [SOFT_X + .05, HY - SOFT_DY, PZ], [SOFT_X + .05, HY, PZ], [4.02, HY, PZ]]);
+label('AquaHome 64K softener', 'Clack WS1 · 12×48 · backwash ≈3.5 gpm', [SOFT_X, 1.57, TZ], '');
 const BR = new THREE.Group(); BR.position.set(4.30, 0, .5); scene.add(BR);
 {
   lathe(BR, [[0, .005], [.215, .005], [.225, .02], [.229, .1], [.232, .98], [.236, .99], [0, .99]], M.brineBlack, 48);
@@ -813,9 +815,9 @@ const BR = new THREE.Group(); BR.position.set(4.30, 0, .5); scene.add(BR);
   cy(BR, .006, .006, M.ledB, -.04, 1.054, -.04, 10);
   cx(BR, .009, .03, M.white, .24, .82, 0, 12); sph(BR, .01, M.white, .257, .82, 0);  // overflow elbow
   cx(BR, .007, .03, M.black, -.24, .94, 0, 12);                                         // brine line port
-  label('Brine tank · 18×40 PROVISIONAL + EZsalt', 'size not approved — TBD per plan · salt level via ESPHome', [4.30, 1.1, .5], '');
+  label('Brine tank · 18×33 + EZsalt', 'size not approved — TBD per plan · salt level via ESPHome', [4.30, 1.1, .5], '');
 }
-cable([[SOFT_X + .112, 1.44, TZ - .04], [3.96, 1.40, .5], [4.02, 1.18, .5], [4.05, .97, .5], [4.045, .94, .5]], .0048, M.black);   // 3/8 brine line
+cable([[SOFT_X + .112 * SOFT_R / .127, 1.44 - SOFT_DY, TZ - .04], [3.96, 1.40, .5], [4.02, 1.18, .5], [4.05, .97, .5], [4.045, .94, .5]], .0048, M.black);   // 3/8 brine line
 /* --- P2 / Big Blue / P3 / limiter ----------------------------------- */
 addTap(4.05, { kind: 'P', name: 'P2' }, 4.1);
 label('P2', 'post-softener', [4.05, HY + .23, PZ], 'tap');
@@ -942,7 +944,7 @@ const DX = 6.85, DZ = .12, RIM = .50;     // receptor centre + flood rim height 
   const a = ends.aio, so = ends.soft, b = ends.brine;
   cable([[AIO_X + .135, 1.47, TZ + .02], [3.12, 1.44, TZ], [3.16, 1.2, .1], [3.18, .95, .03], [DX - .1, .72, .03], [a[0], .72, .03], [a[0], a[1] + .05, a[2]], [a[0], a[1], a[2]]], .0085, M.drainTube);
   // softener regen drain (pressurised) → own air gap
-  cable([[SOFT_X + .135, 1.47, TZ + .02], [3.97, 1.44, .5], [4.0, 1.2, .2], [4.02, .93, .02], [DX - .1, .71, .02], [so[0], .71, .02], [so[0], so[1] + .05, so[2]], [so[0], so[1], so[2]]], .0085, M.drainTube);
+  cable([[SOFT_X + .135 + (SOFT_R - .127), 1.47 - SOFT_DY, TZ + .02], [3.97, 1.44, .5], [4.0, 1.2, .2], [4.02, .93, .02], [DX - .1, .71, .02], [so[0], .71, .02], [so[0], so[1] + .05, so[2]], [so[0], so[1], so[2]]], .0085, M.drainTube);
   // brine overflow: GRAVITY, continuous fall, never teed into a pressurised line → own air gap
   cable([[4.567, .82, .5], [4.62, .81, .52], [4.75, .79, .2], [4.8, .78, .04], [DX - .1, .70, .045], [b[0], .695, .045], [b[0], b[1] + .03, b[2]], [b[0], b[1], b[2]]], .0065, M.clearTube);
   label('3" standpipe + receptor · P-trap', 'existing 3" drain (right) · rim ≥ 18" above trap weir', [DX + .1, RIM + .3, DZ + .05], 'drain');
@@ -1175,11 +1177,11 @@ for (const [x, z, n] of [[2.45, .66, 'Shelly Flood · train'], [4.62, .26, 'Shel
   cy(K, .019, .2, M.pvcWhite, -.06, .58, .2, 20);
   mk(new THREE.TorusGeometry(.05, .019, 12, 24, PI), M.pvcWhite, K, [-.01, .48, .2], [0, 0, PI]);
   seg(K, V(.04, .48, .2), V(.04, .52, .2), .019, M.pvcWhite); seg(K, V(.04, .52, .2), V(.04, .52, -.085), .019, M.pvcWhite);
-  // Frizzlife PD600
+  // Delta Clarifi DWQ1001012
   rb(K, .43, .45, .15, .02, M.white, -.15, .344, .22);
   rb(K, .35, .1, .006, .012, std({ color: 0x24282c, roughness: .3 }), -.15, .5, .297);
   decal(K, lcdTex(['TDS 012', 'FILTER 100%'], '#071a2c', '#55b8ff'), .12, .05, -.2, .5, .3005);
-  decal(K, labelTex(256, 64, null, [{ t: 'frizzlife', c: '#0e7fc0', f: 'bold 40px Arial', y: 32 }]), .1, .025, -.15, .2, .2955, 0, 0, true);
+  decal(K, labelTex(256, 64, null, [{ t: 'DELTA', c: '#0e7fc0', f: 'bold 40px Arial', y: 32 }]), .1, .025, -.15, .2, .2955, 0, 0, true);
   // RO feed: treated-water branch rises through the cabinet floor (continues off-scene below) → feed isolation valve → 1/4" tube
   cy(K, .0143, .29, M.pex, .3, .145, .05, 20);                                      // 1/2" PEX riser
   cy(K, .026, .004, M.chrome, .3, .121, .05, 24);                                    // escutcheon on cabinet floor
@@ -1208,7 +1210,7 @@ for (const [x, z, n] of [[2.45, .66, 'Shelly Flood · train'], [4.62, .26, 'Shel
   label('120 V outlet + RO adapter', 'sink base receptacle · adapter lead to RO', [8.99, .68, -.02], 'elec minor');
   cable([[.0, .5, .2], [.12, .65, .1], [.2, .84, .03], [.2, .9, .02]].map(p => V(9.35 + p[0], p[1], p[2])), .004, M.cableBlue);
   cable([[-.3, .5, .15], [-.2, .6, .05], [-.06, .55, .2]].map(p => V(9.35 + p[0], p[1], p[2])), .004, M.black);
-  label('Frizzlife PD600-TAM3 tankless RO', 'kitchen POU · detached reference vignette · kit accessories per selected kit', [9.2, .62, .3], '');
+  label('Delta Clarifi DWQ1001012 tankless RO', 'under kitchen sink · + DWQ300300 remineralizer · air-gap faucet', [9.2, .62, .3], '');
 }
 
 /* ------------------------------------------------------------------ lights */
@@ -1367,8 +1369,8 @@ const UNITS = [];
     ['aio', S({ name: 'Iron / sulphur filter', model: 'Aquatell Atmos-AIO · Clack WS1 head · 10×54 tank · Katalox Light', what: 'Injects air to oxidise iron and sulphur (rotten-egg smell) and traps the particles in the media bed, then backwashes itself to the drain.', flow: 'After the leak shut-off valve, before tap P1 and the softener.', vendor: 'Aquatell', price: '$1,198.99' }), [2.95, .86, .55], [.3, 1.72, .32]],
     ['P1', TAP('P1', 'After the Atmos-AIO iron filter, before the softener.'), [3.15, HY + .1, PZ], [.07, .3, .1]],
     ['S1', SMP('S1 (post-iron)', 'After the iron filter, before the softener.'), [3.27, HY - .08, PZ], [.06, .16, .08]],
-    ['softener', S({ name: 'Water softener', model: 'AquaHome Clack WS1 48,000-grain · 10×54 · 1.5 ft³ resin + EZsalt sensor', what: 'Removes hardness (calcium/magnesium) so you get no scale on fixtures and heaters. The EZsalt sensor reports salt level.', flow: 'After the iron filter (tap P1), before tap P2 and the Big Blue filter.', vendor: 'AquaHome Supply', price: '$1,483.90 (cart, incl. EZsalt)' }), [3.80, .86, .55], [.3, 1.72, .32]],
-    ['brine', S({ name: 'Brine tank + EZsalt', model: '18×40 brine tank (provisional size) · EZsalt level sensor', what: 'Holds the salt the softener uses to regenerate. The sensor in the lid tells Home Assistant when salt is low.', flow: 'Beside the softener, connected by a 3/8" brine line.', vendor: 'AquaHome Supply (with softener)', price: 'Included with the softener' }), [4.30, .52, .5], [.48, 1.06, .48]],
+    ['softener', S({ name: 'Water softener', model: 'AquaHome Clack WS1 64,000-grain · 12×48 tank · 2.0 ft³ resin · 18×33 brine tank + EZsalt sensor', what: 'Removes hardness (calcium/magnesium) so you get no scale on fixtures and heaters. Sized for a bad-case well (15–30 gpg). Backwash about 3.5 gpm. The EZsalt sensor reports salt level.', flow: 'After the iron filter (tap P1), before tap P2 and the Big Blue filter.', vendor: 'AquaHome Supply', price: '$1,799.00 (incl. EZsalt)' }), [3.80, .78, .55], [.34, 1.56, .36]],
+    ['brine', S({ name: 'Brine tank + EZsalt', model: '18×33 brine tank · EZsalt level sensor', what: 'Holds the salt the softener uses to regenerate. The sensor in the lid tells Home Assistant when salt is low.', flow: 'Beside the softener, connected by a 3/8" brine line.', vendor: 'AquaHome Supply (with softener)', price: 'Included with the softener' }), [4.30, .52, .5], [.48, 1.06, .48]],
     ['P2', TAP('P2', 'After the softener, before the Big Blue 5 µm filter.'), [4.05, HY + .1, PZ], [.07, .3, .1]],
     ['S2', SMP('S2 (post-soft)', 'After the softener, before the Big Blue filter.'), [4.17, HY - .08, PZ], [.06, .16, .08]],
     ['isoBB1', ISO('Isolation valve (Big Blue in)', 'After tap P2, before the Big Blue filter.'), [4.42, HY + .02, PZ], [.08, .14, .12]],
@@ -1409,7 +1411,7 @@ const UNITS = [];
     ['bwXfmr', S({ name: '24 VAC supply (backwash actuator)', model: 'Robertshaw 620-202 plug-in 120 → 24 VAC, 20 VA', what: 'Dedicated 24 VAC for the MV876B (needs only 4 VA). Kept separate from the OpenSprinkler transformer so switching the backwash never interrupts irrigation and valve inrush stays isolated.', flow: 'Plugged into the 4th outlet on the enclosure strip; feeds the backwash Shelly.', vendor: 'SupplyHouse', price: '$40.49' }), [7.640, 1.440, 0.07], [0.045, 0.06, 0.05]],
     ['zoneGland', S({ name: 'Zone-wire cable gland', model: 'Large NEMA 4X cable gland (bottom of enclosure)', what: 'Seals around the irrigation zone-wire bundle where it leaves the box, keeping the enclosure watertight.', flow: 'Bottom of the controls enclosure, right side.', vendor: 'AutomationDirect', price: 'Price not verified' }), [7.650, 1.373, 0.08], [0.04, 0.04, 0.05]],
     ['zoneCable', S({ name: 'Irrigation zone cable (stub)', model: 'Multi-conductor direct-burial sprinkler cable (e.g. 18 AWG, 7–13 conductor)', what: 'Carries each zone wire plus common out to the landscaper-installed Rain Bird valves.', flow: 'From the zone gland, along the wall to a sleeve through the outside wall.', vendor: 'TBD', price: 'Price not verified' }), [7.880, 1.216, .06], [.5, .2, .1]],
-    ['ro', S({ name: 'Kitchen reverse-osmosis system', model: 'Frizzlife PD600-TAM3 tankless RO (replaces the Aquasana)', what: 'Under-sink drinking-water filter that removes dissolved solids; the screen shows water quality (TDS).', flow: 'At the kitchen sink, fed from the treated house supply (after everything on this wall).', vendor: 'Amazon', price: '$399.49' }), [9.20, .344, .22], [.44, .46, .16]],
+    ['ro', S({ name: 'Kitchen reverse-osmosis system', model: 'Delta Clarifi DWQ1001012 tankless RO, 600 GPD + DWQ300300 remineralizer + DWQ4001002 air-gap faucet', what: 'Under-sink drinking-water filter. NSF/ANSI 58/53/401 certified (IAPMO) for arsenic (V), nitrate, chromium, lead, PFAS and more. Test the RO output once after install.', flow: 'Under the kitchen sink, fed from the treated house supply (after everything on this wall).', vendor: 'Ferguson Home', price: '$799.00 + $69.90 + $159.90' }), [9.20, .344, .22], [.44, .46, .16]],
   ];
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
   const unitBox = new THREE.BoxGeometry(1, 1, 1);
