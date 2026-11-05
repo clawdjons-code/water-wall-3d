@@ -67,7 +67,7 @@
 <div id="inspect" role="dialog" aria-label="Equipment details"><button class="x" aria-label="Close">×</button><div class="body"></div></div>
 <div id="ui">
   <div class="t">Well water treatment closet — 3D</div>
-  <div class="s">rev closet-v2 · 72″ W × 40″ DEPTH × 106″ H · door L/front · PT back-left · 3″ drain front-right · main bypass option A · no RO in closet</div>
+  <div class="s">rev closet-v3 · 72″ W × 40″ D × 106″ H · door L/front · PT back-left · 3″ drain BACK-RIGHT · main bypass option A · no RO in closet</div>
   <div>
     <button id="btnLabels" class="on" title="Toggle labels (L)">Labels (L)</button>
     <button id="btnWalls" class="on" title="Ghost walls">Ghost walls</button>
@@ -122,11 +122,21 @@ const HY = trainY;
 
 /* Intersection bookkeeping — build.py parses PIPE_SEGS + OBSTACLES */
 const PIPE_SEGS = [];   // {a:[x,y,z], b:[x,y,z], r, tag}
+const GRAVITY_SEGS = []; // gravity drains — must not rise along flow
 const OBSTACLES = [];   // {type:'cyl'|'box', ...}
 
 function trackSeg(a, b, r, tag) {
   PIPE_SEGS.push({ a: [a.x, a.y, a.z], b: [b.x, b.y, b.z], r, tag: tag || 'pipe' });
 }
+function trackGravity(pts, r = 0.008, name = 'gravity') {
+  const P = pts.map(q => q.isVector3 ? q : V(q[0], q[1], q[2]));
+  for (let i = 0; i < P.length - 1; i++) {
+    const a = P[i], b = P[i + 1];
+    GRAVITY_SEGS.push({ a: [a.x, a.y, a.z], b: [b.x, b.y, b.z], r, tag: name });
+    trackSeg(a, b, r, 'drain');
+  }
+}
+window.__GRAVITY_SEGS = GRAVITY_SEGS;
 function addCylObs(name, cx, cy, cz, radius, y0, y1) {
   OBSTACLES.push({ type: 'cyl', name, c: [cx, cz], r: radius, y0, y1 });
 }
@@ -753,9 +763,9 @@ window.setGhost = setGhost;
 */
 const PT_X = 11 * IN, PT_Z = DEPTH - 11 * IN;
 const AIO_X = 28 * IN, AIO_Z = DEPTH - 8 * IN;
-const SOFT_X = 42 * IN, SOFT_Z = DEPTH - 9 * IN, SOFT_R = .1524, SOFT_DY = .152;
-const BRINE_X = 54 * IN, BRINE_Z = DEPTH - 20 * IN;
-const DRAIN_X = W - 2.0 * IN, DRAIN_Z = 4.5 * IN, DRAIN_RIM = 38 * IN;
+const SOFT_X = 40 * IN, SOFT_Z = DEPTH - 9 * IN, SOFT_R = .1524, SOFT_DY = .152;
+const BRINE_X = 52 * IN, BRINE_Z = DEPTH - 18 * IN;
+const DRAIN_X = W - 2.0 * IN, DRAIN_Z = DEPTH - 4.5 * IN, DRAIN_RIM = 18 * IN;  // BACK-RIGHT; rim ~18" AFF so gravity drains fall
 
 /* --- Pressure tank (existing) back-left --- */
 {
@@ -807,38 +817,39 @@ function placeZ(g, x, y, z) { return place(g, x, y, z, 0, RY); }
 
 // Z stations along right wall (inches from front)
 const Z = {
-  stub: 6 * IN,
-  p0: 7.5 * IN,
-  spin: 10.5 * IN,
-  meter: 15.5 * IN,
-  leak: 19.0 * IN,
-  // gap: run to AIO/soft via back wall, return
-  ret: 23.5 * IN,
-  p2: 24.5 * IN,
-  bb: 27.5 * IN,
-  p3: 31.0 * IN,
-  lim: 32.5 * IN,
-  uvIn: 33.5 * IN,
-  uv: 35.0 * IN,
-  uvSv: 37.5 * IN,
-  p4: 38.5 * IN,
-  house: DEPTH - 3 * IN,
+  // +Z = back. Flow along right wall: BACK inlet → spin/AFV (by drain) → meter → leak → AIO/soft → BB → lim → UV → house (toward front).
+  stub: DEPTH - 4 * IN,
+  p0: DEPTH - 6 * IN,
+  spin: DEPTH - 8.5 * IN,
+  meter: 29 * IN,
+  leak: 27 * IN,
+  ret: 25 * IN,
+  p2: 24 * IN,
+  bb: 21 * IN,
+  p3: 19 * IN,
+  lim: 17.5 * IN,
+  uvIn: 16 * IN,
+  uv: 14 * IN,
+  uvSv: 12 * IN,
+  p4: 10.5 * IN,
+  house: 8 * IN,
 };
 
 /* Inlet from PT → stubs (routes AROUND equipment, never through) */
-// PT tee ≈ (PT_X+.22, .25, PT_Z-.12) → forward in aisle west of AIO → across front (right of door) → up at right wall
+// PT tee → aisle west of AIO → FORWARD past tanks → across front of closet → along right wall BACK to stub → up
 {
-  const aisleX = 20 * IN;          // west of AIO (AIO at 28", r=5" → left edge 23"; 20" clears)
-  const frontZ = 7 * IN;           // forward of brine (brine z=20" r=9" → front edge 11")
+  const aisleX = 18 * IN;          // west of AIO (AIO at 28")
+  const crossZ = 10 * IN;          // forward of brine (brine ~DEPTH-18") and door-clear of SW swing
   pex([
     [PT_X + .22, .25, PT_Z - .12],
     [aisleX, .25, PT_Z - .12],
-    [aisleX, .25, frontZ],
-    [trainX, .25, frontZ],
-    [trainX, trainY, frontZ],
+    [aisleX, .25, crossZ],
+    [trainX, .25, crossZ],
+    [trainX, .25, Z.stub],
+    [trainX, trainY, Z.stub],
   ], { clips: false });
-  placeZ(ballValve(), trainX, trainY, Z.stub);  // main inlet ISO (doubles as train inlet)
-  label('From pressure tank', 'aisle route · clears door swing & tanks', [aisleX, 0.55, DEPTH / 2], 'minor');
+  placeZ(ballValve(), trainX, trainY, Z.stub);  // main inlet ISO near back
+  label('From pressure tank', 'aisle → front cross → right wall → back-right train', [aisleX, 0.55, DEPTH / 2], 'minor');
 }
 
 /* P0 */
@@ -853,9 +864,7 @@ pex([[trainX, trainY, Z.stub + .04], [trainX, trainY, Z.p0 - .04]], { clips: fal
 placeZ(union(), trainX, trainY, Z.spin - .12);
 {
   const f = f76s(); placeZ(f.g, trainX, trainY, Z.spin);
-  // Local AFV flush hose down to a nearby air-gap funnel, then 1" PVC to receptor (routed later)
-  cable([[trainX, trainY - .585, Z.spin], [trainX, trainY - .64, Z.spin]], .011, M.drainTube);
-  mk(new THREE.CylinderGeometry(.05, .022, .08, 32, 1, true), std({ color: 0xf3f3f1, roughness: .45, side: THREE.DoubleSide }), scene, [trainX - .02, trainY - .73, Z.spin]);
+  // AFV flush is routed downhill to BACK-RIGHT receptor air gap (see drain section) — no local uphill run
   label('Rusco 1-140-F + AFV', '140 mesh · sump clear · AFV own timer', [trainX - .28, trainY + .14, Z.spin]);
   addCylObs('spin_sump', trainX, 0, Z.spin, 0.07, trainY - .42, trainY - .08);  // below pipe CL
 }
@@ -1021,7 +1030,7 @@ label('TO HOUSE · treated', 'after P4', [trainX - .2, trainY + .1, Z.house]);
   addBoxObs('main_bypass_valve', trainX, y, (z0 + z1) / 2, 0.12, 0.16, 0.12);
 }
 
-/* ================================================================== 3" DRAIN — front-right, obvious standpipe + P-trap + receptor */
+/* ================================================================== 3" DRAIN — BACK-RIGHT, obvious standpipe + P-trap + receptor */
 {
   const DX = DRAIN_X, DZ = DRAIN_Z, RIM = DRAIN_RIM;
   const dwv = M.pvcWhite;
@@ -1034,15 +1043,16 @@ label('TO HOUSE · treated', 'after P4', [trainX - .2, trainY + .1, Z.house]);
   mk(new THREE.TorusGeometry(2.2 * IN, 1.75 * IN, 14, 24, PI), dwv, scene, [DX - 2.2 * IN, 2.2 * IN, DZ], [0, 0, PI]);
   cy(scene, 1.75 * IN, 3 * IN, dwv, DX - 4.4 * IN, 3.5 * IN, DZ, 28);
   // wall strap
-  bx(scene, .02, .04, .08, M.ss, DX + 1.9 * IN, 12 * IN, DZ);
-  bx(scene, .02, .04, .08, M.ss, DX + 1.9 * IN, 28 * IN, DZ);
-  decal(scene, labelTex(256, 64, '#ffffff', [{ t: '3" STANDPIPE · P-TRAP', c: '#222', f: 'bold 26px Arial', y: 34 }]), .10, .025, DX, .55, DZ + .06);
+  bx(scene, .02, .04, .08, M.ss, DX + 1.9 * IN, 8 * IN, DZ);
+  bx(scene, .02, .04, .08, M.ss, DX + 1.9 * IN, 14 * IN, DZ);
+  decal(scene, labelTex(256, 64, '#ffffff', [{ t: '3" STANDPIPE · P-TRAP', c: '#222', f: 'bold 26px Arial', y: 34 }]), .10, .025, DX, RIM * 0.55, DZ + .06);
   // air-gap ends (four lines)
+  // Tips sit just above rim — gravity lines fall to these y values (no rise into the gap)
   const ends = {
-    afv: [DX - .04, RIM + .12, DZ + .03, .017],
-    aio: [DX + .02, RIM + .09, DZ + .04, .0085],
-    soft: [DX + .045, RIM + .09, DZ + .01, .0085],
-    brine: [DX + .05, RIM + .08, DZ - .03, .0065],
+    afv: [DX - .04, RIM + .035, DZ + .03, .017],
+    aio: [DX + .02, RIM + .045, DZ + .04, .0085],
+    soft: [DX + .045, RIM + .040, DZ + .01, .0085],
+    brine: [DX + .05, RIM + .030, DZ - .03, .0065],
   };
   bx(scene, .02, .004, .12, M.galv, DX + .02, RIM + .14, DZ + .02);
   for (const k in ends) {
@@ -1051,61 +1061,82 @@ label('TO HOUSE · treated', 'after P4', [trainX - .2, trainY + .1, Z.house]);
     mk(new THREE.TorusGeometry(r + .004, .0025, 8, 20), M.galv, scene, [x, y + .02, z], [PI / 2, 0, 0]);
   }
   decal(scene, labelTex(256, 64, '#ffffff', [{ t: 'AIR GAPS ≥ 2× dia', c: '#b0281e', f: 'bold 30px Arial', y: 34 }]), .09, .022, DX - .05, RIM + .22, DZ + .06);
-  label('3″ DRAIN standpipe + receptor', 'front-right · against right wall · P-trap · all air gaps', [DX - .18, 1.15, DZ + .1], 'drain');
+  label('3″ DRAIN standpipe + receptor', 'BACK-RIGHT · against right wall · P-trap · all air gaps', [DX - .22, RIM + 0.35, DZ - .08], 'drain');
   addCylObs('drain3', DX, 0, DZ, 1.6 * IN, 0, RIM - .02);  // standpipe body; air-gap zone above rim free
 
-  // Drain line routes — OUTSIDE tank cylinders
-  // AFV: from local funnel under spin-down → along right wall low → receptor
-  const af = ends.afv;
-  pex([
-    [trainX - .02, trainY - .78, Z.spin],
-    [trainX - .08, 0.42, Z.spin],
-    [trainX - .08, 0.40, DZ + .08],
-    [af[0], af[1], af[2]],
-  ], { clips: false, start: false, end: false });
-  // override last segs as drain material visually via cable for flexible look
-  cable([[trainX - .02, trainY - .78, Z.spin], [trainX - .08, 0.42, Z.spin], [DX - .08, 0.40, DZ + .08], [af[0], af[1] + .02, af[2]], [af[0], af[1], af[2]]], .017, M.pvcWhite);
+  // Drain line routes — OUTSIDE tank cylinders.
+  // Gravity lines (AFV after local dump, brine overflow) and preferred Clack drains: monotonically decreasing Y to tip.
+  const af = ends.afv, ao = ends.aio, so = ends.soft, br = ends.brine;
 
-  // AIO backwash: from head RIGHT (east) off tank, down outside shell, forward along aisle east of soft/brine gap, to receptor
-  const ao = ends.aio;
-  const aioExitX = AIO_X + 9 * IN;  // outside AIO r=5"
-  cable([
-    [AIO_X + .16, 1.50, AIO_Z - .18],
-    [aioExitX, 1.55, AIO_Z - .22],
-    [aioExitX, 0.50, AIO_Z - .22],
-    [aioExitX, 0.46, 10 * IN],
-    [DX - .1, 0.44, DZ + .1],
-    [ao[0], ao[1] + .04, ao[2]],
-    [ao[0], ao[1], ao[2]],
-  ], .0085, M.drainTube);
+  // AFV: pressurized flush from AFV outlet down to tip above rim (short; spin is near back-right)
+  {
+    const afvOutY = trainY - .505;
+    const pts = [
+      [trainX, afvOutY, Z.spin],
+      [trainX - .04, afvOutY - .04, Z.spin],
+      [trainX - .06, (afvOutY + af[1]) / 2, (Z.spin + DZ) / 2],
+      [af[0], af[1] + .01, af[2]],
+      [af[0], af[1], af[2]],
+    ];
+    cable(pts, .017, M.pvcWhite);
+    trackGravity(pts, .017, 'afv_flush');
+  }
 
-  // Softener regen: exit east of softener, down, around brine (toward right wall / front), to receptor
-  const so = ends.soft;
-  const softExitX = SOFT_X + 12 * IN;
-  const runZSoft = Math.min(SOFT_Z, BRINE_Z) - 12 * IN;  // forward of tanks
-  cable([
-    [SOFT_X + .18, 1.50 - SOFT_DY, SOFT_Z - .18],
-    [SOFT_X + .22, 1.55, SOFT_Z - .22],
-    [softExitX, 1.55, runZSoft],
-    [softExitX, 0.50, runZSoft],
-    [W - 6 * IN, 0.46, 10 * IN],
-    [DX - .08, 0.44, DZ + .08],
-    [so[0], so[1] + .04, so[2]],
-    [so[0], so[1], so[2]],
-  ], .0085, M.drainTube);
+  // AIO backwash (pressurised Clack): south into aisle (clears soft), east past brine, continuously DOWN to tip
+  {
+    const aisleZ = DEPTH - 22 * IN; // forward of AIO/soft shells
+    const eastX = Math.min(BRINE_X + 11 * IN, DX - .14); // east of brine
+    // Drop below Big Blue housing (obs y0 ≈ trainY-0.68) before swinging +Z toward receptor
+    const pts = [
+      [AIO_X + .05, 1.47, AIO_Z - .20],
+      [AIO_X + .05, 1.35, aisleZ],
+      [eastX, 1.15, aisleZ],
+      [eastX, 0.70, aisleZ],
+      [eastX, 0.52, aisleZ],
+      [DX - .08, 0.515, (aisleZ + DZ) / 2],
+      [DX - .08, 0.510, DZ + .04],
+      [ao[0], ao[1] + .004, ao[2]],
+      [ao[0], ao[1], ao[2]],
+    ];
+    cable(pts, .0085, M.drainTube);
+    trackGravity(pts, .0085, 'aio_backwash');
+  }
 
-  // Brine overflow gravity: from elbow, continuous fall, around front of brine toward receptor
-  const br = ends.brine;
-  cable([
-    [BRINE_X + .26, .70, BRINE_Z],
-    [BRINE_X + .30, .65, BRINE_Z - .08],
-    [BRINE_X + .20, .55, BRINE_Z - .18],
-    [DX - .05, 0.42, DZ + .05],
-    [br[0], br[1] + .03, br[2]],
-    [br[0], br[1], br[2]],
-  ], .0065, M.clearTube);
+  // Softener regen (pressurised): south into aisle, east of brine, continuously DOWN to tip
+  {
+    const softOutY = 1.47 - SOFT_DY;
+    const aisleZ = DEPTH - 22 * IN;
+    const eastX = Math.min(BRINE_X + 11 * IN, DX - .14);
+    const pts = [
+      [SOFT_X + .05, softOutY, SOFT_Z - .20],
+      [SOFT_X + .05, softOutY - .08, aisleZ],
+      [eastX, softOutY - .18, aisleZ],
+      [eastX, 0.70, aisleZ],
+      [eastX, 0.52, aisleZ],
+      [DX - .06, 0.515, (aisleZ + DZ) / 2],
+      [DX - .06, 0.505, DZ + .03],
+      [so[0], so[1] + .004, so[2]],
+      [so[0], so[1], so[2]],
+    ];
+    cable(pts, .0085, M.drainTube);
+    trackGravity(pts, .0085, 'soft_regen');
+  }
 
-  label('Drain lines → receptor', 'AFV · AIO · soft · brine (gravity) · each own air gap', [W / 2 + .15, 0.62, DEPTH / 3], 'drain');
+  // Brine overflow: GRAVITY ONLY — continuous fall, never rises
+  {
+    const pts = [
+      [BRINE_X + .26, .70, BRINE_Z],
+      [BRINE_X + .28, .62, BRINE_Z + .06],
+      [BRINE_X + .22, .55, (BRINE_Z + DZ) / 2],
+      [DX - .04, 0.50, DZ - .02],
+      [br[0], br[1] + .006, br[2]],
+      [br[0], br[1], br[2]],
+    ];
+    cable(pts, .0065, M.clearTube);
+    trackGravity(pts, .0065, 'brine_overflow');
+  }
+
+  label('Drain lines → BACK-RIGHT receptor', 'AFV · AIO · soft · brine — continuous fall · each own air gap', [W / 2 + .1, 0.55, DEPTH * 0.65], 'drain');
 }
 
 /* Track drain cables as segments approximately for intersection (sample key spans) */
@@ -1178,7 +1209,7 @@ const VIEWS = {
   tanks: { p: [W / 2 - 0.2, 1.4, 0.3], t: [AIO_X + .15, 1.0, DEPTH - .25] },
   uv:    { p: [trainX - 1.3, 1.35, Z.uv], t: [trainX - 0.05, 1.2, Z.uv] },
   controls: { p: [W - 0.3, 2.15, DEPTH - 1.6], t: [W - 0.25, 2.15, DEPTH - 0.15] },
-  drain: { p: [W - 0.15, 1.1, -1.1], t: [DRAIN_X, 0.7, DRAIN_Z] },
+  drain: { p: [W + 0.3, 1.0, DEPTH + 1.3], t: [DRAIN_X, 0.55, DRAIN_Z] },
 };
 const ceiling = scene.getObjectByName('ceiling');
 const _v = new THREE.Vector3();
@@ -1277,14 +1308,14 @@ const UNITS = [];
   const UNITDATA = [
     ['tank', S({ name: 'Existing pressure tank', model: 'Existing well tank + tank tee (reused)', what: 'Stores pressurised water from the well pump so the pump does not start for every tap opening.', flow: 'Back-left corner of the closet; feeds the treatment train via the aisle pipe route.', vendor: 'Existing — reused', price: '$0' }), [PT_X, .8, PT_Z], [.52, 1.6, .52]],
     ['P0', TAP('P0', 'Right-wall train start: after the pressure tank feed, before the Rusco spin-down.'), [trainX, trainY + .1, Z.p0], [.1, .32, .1]],
-    ['f76s', S({ name: 'Spin-down sediment filter', model: 'Rusco 1-140-F · 1" · 140 mesh (≈104 µm) · clear cover', what: 'Catches sand, grit and iron flakes; sediment spins into the clear cover and is flushed by the AFV.', flow: 'Right wall near front/stubs, after P0, before the pulse meter.', vendor: 'Agri Sales', price: '$49.75' }), [trainX, trainY - .14, Z.spin], [.2, .45, .16]],
+    ['f76s', S({ name: 'Spin-down sediment filter', model: 'Rusco 1-140-F · 1" · 140 mesh (≈104 µm) · clear cover', what: 'Catches sand, grit and iron flakes; sediment spins into the clear cover and is flushed by the AFV.', flow: 'Right wall near BACK (by the 3″ drain), after P0, before the pulse meter.', vendor: 'Agri Sales', price: '$49.75' }), [trainX, trainY - .14, Z.spin], [.2, .45, .16]],
     ['mv876', S({ name: 'Automatic flush valve', model: 'Rusco AFV · 120 V timer · 1/2" full-port brass · NEMA 4', what: 'Opens the filter flush port on its own timer. Plugged into its own receptacle — no HA control needed.', flow: 'On the spin-down flush port; drain to 3″ receptor air gap.', vendor: 'SupplyHouse', price: '$384.62' }), [trainX, trainY - .47, Z.spin], [.12, .15, .12]],
-    ['drain3', S({ name: '3" standpipe + receptor + P-trap', model: '3" DWV standpipe with receptor funnel, P-trap, to EXISTING 3" drain', what: 'One common, code-trapped receptor. Every treatment drain empties through its own air gap (≥ 2× diameter above the rim).', flow: 'Front-right corner against the right wall (~2″ off right wall, ~4.5″ from front).', vendor: 'Plumber (on site)', price: 'TBD' }), [DRAIN_X, DRAIN_RIM / 2, DRAIN_Z], [.28, DRAIN_RIM + .1, .28]],
+    ['drain3', S({ name: '3" standpipe + receptor + P-trap', model: '3" DWV standpipe with receptor funnel, P-trap, to EXISTING 3" drain', what: 'One common, code-trapped receptor. Every treatment drain empties through its own air gap (≥ 2× diameter above the rim).', flow: 'BACK-RIGHT corner against the right wall (~2″ off right wall, ~4.5″ from back).', vendor: 'Plumber (on site)', price: 'TBD' }), [DRAIN_X, DRAIN_RIM / 2, DRAIN_Z], [.28, DRAIN_RIM + .1, .28]],
     ['airGaps', S({ name: 'Air-gap clip bracket', model: 'Galvanised strap + one clip per drain line above the rim', what: 'Holds each drain end so the open gap stays visible and back-siphoning cannot occur.', flow: 'Above the 3″ receptor.', vendor: 'Plumber', price: 'TBD' }), [DRAIN_X, DRAIN_RIM + .12, DRAIN_Z], [.16, .1, .16]],
-    ['aioDrain', S({ name: 'Iron filter backwash line', model: 'Atmos-AIO / Clack WS1 drain (¾", pressurised)', what: 'Carries the ~6.5 gpm iron-filter backwash. Routed outside the tank shell to its own air gap.', flow: 'From AIO head, east of tank, down and forward to the receptor.', vendor: 'Plumber', price: 'TBD' }), [AIO_X + 7 * IN, 0.9, AIO_Z - .1], [.08, 1.0, .2]],
-    ['softDrain', S({ name: 'Softener regeneration drain', model: 'Clack WS1 softener drain (pressurised)', what: 'Own line and own air gap; never shares a pipe with the brine overflow.', flow: 'From softener head, east of tank, around brine to the receptor.', vendor: 'Plumber', price: 'TBD' }), [SOFT_X + 8 * IN, 0.85, SOFT_Z - .1], [.08, 1.0, .2]],
-    ['brineOver', S({ name: 'Brine tank overflow (gravity)', model: '½" overflow from brine elbow', what: 'Gravity only — continuous fall, never teed into a pressurised drain. Own air gap at the receptor.', flow: 'From brine overflow elbow toward the front-right receptor.', vendor: 'Plumber', price: 'TBD' }), [BRINE_X + .2, .55, BRINE_Z - .1], [.2, .3, .35]],
-    ['afvLine', S({ name: 'AFV flush drain line', model: '1" Sch 40 PVC to receptor air gap', what: 'Carries short AFV flush bursts from the local funnel to the 3″ receptor.', flow: 'Along the right wall low, from spin-down to front-right receptor.', vendor: 'Plumber', price: 'TBD' }), [trainX - .08, 0.4, (Z.spin + DRAIN_Z) / 2], [.08, .1, .4]],
+    ['aioDrain', S({ name: 'Iron filter backwash line', model: 'Atmos-AIO / Clack WS1 drain (¾", pressurised)', what: 'Carries the ~6.5 gpm iron-filter backwash. Routed outside the tank shell to its own air gap.', flow: 'From AIO head south into aisle, east of brine, downhill to BACK-RIGHT receptor.', vendor: 'Plumber', price: 'TBD' }), [AIO_X + 7 * IN, 0.9, AIO_Z - .1], [.08, 1.0, .2]],
+    ['softDrain', S({ name: 'Softener regeneration drain', model: 'Clack WS1 softener drain (pressurised)', what: 'Own line and own air gap; never shares a pipe with the brine overflow.', flow: 'From softener head south into aisle, east of brine, downhill to BACK-RIGHT receptor.', vendor: 'Plumber', price: 'TBD' }), [SOFT_X + 8 * IN, 0.85, SOFT_Z - .1], [.08, 1.0, .2]],
+    ['brineOver', S({ name: 'Brine tank overflow (gravity)', model: '½" overflow from brine elbow', what: 'Gravity only — continuous fall, never teed into a pressurised drain. Own air gap at the receptor.', flow: 'From brine overflow elbow toward the BACK-RIGHT receptor.', vendor: 'Plumber', price: 'TBD' }), [BRINE_X + .2, .55, BRINE_Z - .1], [.2, .3, .35]],
+    ['afvLine', S({ name: 'AFV flush drain line', model: '1" Sch 40 PVC to receptor air gap', what: 'Carries short AFV flush bursts from the local funnel to the 3″ receptor.', flow: 'Along the right wall low, from spin-down (near back) downhill to BACK-RIGHT receptor.', vendor: 'Plumber', price: 'TBD' }), [trainX - .08, 0.4, (Z.spin + DRAIN_Z) / 2], [.08, .1, .4]],
     ['meter', S({ name: 'Pulse water meter', model: 'DAE MJP-100P · 1" · 1 gallon per pulse', what: 'Counts every gallon and proves shut-off valves really closed.', flow: 'Right wall after spin-down, before leak shut-off.', vendor: 'DAE Control', price: '$119.00' }), [trainX, trainY, Z.meter], [.18, .16, .14]],
     ['leakValve', S({ name: 'Leak shut-off valve', ...NS, what: 'Automatic main shut-off. Spring closes it if a leak sensor trips or power is lost. Bypassed when the main bypass is open.', flow: 'Right wall after the meter, before the jump to AIO/softener.' }), [trainX, trainY + .05, Z.leak], [.14, .22, .12]],
     ['aio', S({ name: 'Iron / sulphur filter', model: 'Aquatell Atmos-AIO · Clack WS1 · 10×54 · Katalox Light', what: 'Injects air to oxidise iron and sulphur and traps particles, then backwashes to the drain.', flow: 'Back wall, east of the pressure tank. Confirm Clack bypass with order.', vendor: 'Aquatell', price: '$1,198.99' }), [AIO_X, .9, AIO_Z], [.3, 1.8, .32]],
@@ -1372,7 +1403,7 @@ window.selectUnitById = id => { const g = UNITS.find(u => u.userData.unit.id ===
 window.unitIds = () => UNITS.map(u => u.userData.unit.id);
 
 /* Export geometry for build-time intersection check */
-window.__exportCollision = () => JSON.stringify({ segs: PIPE_SEGS, obs: OBSTACLES });
+window.__exportCollision = () => JSON.stringify({ segs: PIPE_SEGS, obs: OBSTACLES, gravity: GRAVITY_SEGS });
 
 const params = new URLSearchParams(location.search);
 const hp = new URLSearchParams(location.hash.slice(1));
