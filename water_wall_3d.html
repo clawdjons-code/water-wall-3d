@@ -67,14 +67,14 @@
 <div id="inspect" role="dialog" aria-label="Equipment details"><button class="x" aria-label="Close">×</button><div class="body"></div></div>
 <div id="ui">
   <div class="t">Well water treatment closet — 3D</div>
-  <div class="s">rev closet-v4b · 72″ W × 40″ D × 106″ H · door L/front · PT back-left · 3″ drain BACK-RIGHT · main bypass option A · no RO in closet</div>
+  <div class="s">rev closet-v6 · 72″ W × 40″ D × 106″ H · walls BACK+LEFT only · open front & right · PT back-left · drain back-right · bypass A</div>
   <div>
     <button id="btnLabels" class="on" title="Toggle labels (L)">Labels (L)</button>
     <button id="btnWalls" class="on" title="Ghost walls">Ghost walls</button>
     <button data-view="orbit" class="on">Orbit</button>
     <button data-view="front">Front</button>
     <button data-view="top">Top</button>
-    <button data-view="right">Right wall</button>
+    <button data-view="left">Left wall</button>
     <button data-view="back">Back wall</button>
     <span style="color:#8d98a3;margin:0 4px">detail:</span>
     <button data-view="inlet">Inlet</button>
@@ -84,7 +84,7 @@
     <button data-view="drain">Drain</button>
   </div>
   <div id="note"><b>⚠ ILLUSTRATIVE CLOSET LAYOUT — NOT FIELD-APPROVED.</b>
-    Equipment sizes follow the specified products. Exact pipe offsets, hanger locations and outlet heights are TBD on site.
+    Walls: BACK (72″) + LEFT (40″) only — front and right are OPEN (no door). Exact offsets TBD on site.
     Kitchen RO is under the sink (not shown). Wiring is simplified, not a wiring diagram.</div>
 </div>
 <div id="fail"></div>
@@ -114,7 +114,7 @@ const IN = 0.0254;
 const W = 72 * IN, DEPTH = 40 * IN, H = 106 * IN;  // closet interior
 const PR = 0.0143;   // 1" PEX-A OD
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
-const trainX = W - 5.5 * IN;   // right-wall pipe centerline (~5.5" off right wall face)
+const trainX = 5.5 * IN;   // LEFT-wall pipe centerline (~5.5" off left wall face)
 const trainY = 48 * IN;
 const bypassY = 96 * IN;
 const PZ = 0.12; // kept for helper compatibility (clip no-op in closet)
@@ -708,38 +708,38 @@ function mineralTank(x, z, mat, sticker, opts) {   // 10x54 default; opts.r/opts
 }
 
 
-/* ================================================================== CLOSET ROOM */
+/* ================================================================== CLOSET ROOM
+   ONLY back wall (72" along +X at z≈0) and left wall (40" along +Z at x≈0).
+   Front (+Z) and right (+X) are OPEN — no door, no right wall.
+*/
 const wallsGroup = new THREE.Group(); wallsGroup.name = 'walls'; scene.add(wallsGroup);
 let ghostWalls = true;
+window.__WALLS = { back: true, left: true, right: false, front: false };
 
 {
-  const fl = concreteTex(7, [134, 132, 127], { stains: 10, contrast: 30 });
+  const fl = concreteTex(7, [134, 132, 127], { stains: 10, cracks: 30 });
   fl.map.repeat.set(2.2, 1.3); fl.rough.repeat.set(2.2, 1.3);
   const floor = mk(new THREE.PlaneGeometry(W + .2, DEPTH + .2), std({ map: fl.map, roughnessMap: fl.rough, roughness: 1, metalness: 0 }), scene, [W / 2, 0, DEPTH / 2], [-PI / 2, 0, 0]);
   floor.castShadow = false;
+  // Ghost floor outline
+  const edge = std({ color: 0x6a7380, roughness: .7, transparent: true, opacity: 0.55 });
+  const ew = 0.012;
+  bx(scene, W, ew, ew, edge, W / 2, 0.006, 0);
+  bx(scene, ew, ew, DEPTH, edge, 0, 0.006, DEPTH / 2);
+  bx(scene, W, ew, ew, edge, W / 2, 0.006, DEPTH);
+  bx(scene, ew, ew, DEPTH, edge, W, 0.006, DEPTH / 2);
+
+  label('OPEN (no wall)', 'front · service access', [W / 2, 0.12, DEPTH - 0.08], 'warn');
+  label('OPEN (no wall)', 'right side', [W - 0.12, 0.12, DEPTH / 2], 'warn');
 
   const wallMat = std({ color: 0xd8d3c8, roughness: .92, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide });
   const wt = 0.05;
-  // back (z≈0), left, right
-  mk(new THREE.BoxGeometry(W, H, wt), wallMat, wallsGroup, [W / 2, H / 2, -wt / 2]);
-  mk(new THREE.BoxGeometry(wt, H, DEPTH), wallMat, wallsGroup, [-wt / 2, H / 2, DEPTH / 2]);
-  mk(new THREE.BoxGeometry(wt, H, DEPTH), wallMat, wallsGroup, [W + wt / 2, H / 2, DEPTH / 2]);
-  // front (z=DEPTH) with door opening (~30" from left)
-  const doorW = 30 * IN;
-  mk(new THREE.BoxGeometry(W - doorW, H, wt), wallMat, wallsGroup, [doorW + (W - doorW) / 2, H / 2, DEPTH + wt / 2]);
-  // door swing arc on floor at front-left
-  const arc = new THREE.Mesh(
-    new THREE.RingGeometry(0.04, doorW, 28, 1, -PI / 2, PI / 2),
-    std({ color: 0xc0181e, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false })
-  );
-  arc.rotation.x = -PI / 2; arc.position.set(0, 0.012, DEPTH); scene.add(arc);
-  label('DOOR', '~30″ opening · keep swing clear', [doorW / 2, 0.18, DEPTH - 0.12], 'warn');
+  mk(new THREE.BoxGeometry(W, H, wt), wallMat, wallsGroup, [W / 2, H / 2, -wt / 2]); // BACK
+  mk(new THREE.BoxGeometry(wt, H, DEPTH), wallMat, wallsGroup, [-wt / 2, H / 2, DEPTH / 2]); // LEFT
 
-  // ceiling (hideable for top view)
   const ceil = new THREE.Group(); ceil.name = 'ceiling'; scene.add(ceil);
   const ceilMat = std({ color: 0xcfc8ba, roughness: .85, transparent: true, opacity: 0.35, depthWrite: false });
   mk(new THREE.BoxGeometry(W, 0.04, DEPTH), ceilMat, ceil, [W / 2, H + 0.02, DEPTH / 2]);
-  // shop light
   const lamp = new THREE.Group(); lamp.position.set(W / 2, H - 0.08, DEPTH / 2); ceil.add(lamp);
   rb(lamp, 1.0, .035, .09, .01, M.white, 0, 0, 0);
   bx(lamp, .96, .004, .06, std({ color: 0xffffff, emissive: 0xfff4e2, emissiveIntensity: 2.5 }), 0, -.02, 0);
@@ -759,15 +759,14 @@ function setGhost(on) {
 window.setGhost = setGhost;
 
 /* ================================================================== EQUIPMENT LAYOUT
-   Origin: BACK-left floor corner; +X right; +Y up; +Z toward FRONT/door.
-   three.js Front camera sits at +Z (doorway) looking down −Z at the back wall → screen-left = world −X? NO:
-   looking down −Z ⇒ camera +X = world +X ⇒ screen-right = +X. Tank (small X) = screen-LEFT; drain (large X) = screen-RIGHT.
+   Origin: BACK-left; +X toward OPEN right; +Y up; +Z toward OPEN front.
+   Walls: BACK + LEFT only. Front camera at +Z looking −Z → tank LEFT, drain RIGHT.
 */
-const PT_X = 11 * IN, PT_Z = 11 * IN;                 // BACK-LEFT
-const AIO_X = 28 * IN, AIO_Z = 8 * IN;
-const SOFT_X = 40 * IN, SOFT_Z = 9 * IN, SOFT_R = .1524, SOFT_DY = .152;
-const BRINE_X = 52 * IN, BRINE_Z = 18 * IN;            // forward of softener (toward door)
-const DRAIN_X = W - 2.0 * IN, DRAIN_Z = 4.5 * IN, DRAIN_RIM = 18 * IN;  // BACK-RIGHT
+const PT_X = 22 * IN, PT_Z = 10 * IN;                 // back-left; clears left-wall train + AFV aisle
+const AIO_X = 40 * IN, AIO_Z = 9 * IN;
+const SOFT_X = 54 * IN, SOFT_Z = 10 * IN, SOFT_R = .1524, SOFT_DY = .152;
+const BRINE_X = 55 * IN, BRINE_Z = 28 * IN;            // forward of soft; service from open front
+const DRAIN_X = W - 3.0 * IN, DRAIN_Z = 3.5 * IN, DRAIN_RIM = 18 * IN;  // back-right at open end
 
 /* --- Pressure tank (existing) back-left --- */
 {
@@ -808,16 +807,16 @@ addCylObs('softener', SOFT_X, 0, SOFT_Z, 6.2 * IN, 0, 1.60);
   cy(BR, .006, .006, M.ledB, -.04, .914, -.04, 10);
   cx(BR, .009, .03, M.white, .24, .70, 0, 12); sph(BR, .01, M.white, .257, .70, 0);
   label('Brine tank · 18×33 + EZsalt', 'aisle · fill from aisle · overflow gravity-only', [BRINE_X, 1.05, BRINE_Z]);
-  addCylObs('brine', BRINE_X, 0, BRINE_Z, 9.2 * IN, 0, 0.90);
+  addCylObs('brine', BRINE_X, 0, BRINE_Z, 9.0 * IN, 0, 0.90);
 }
 
-/* ================================================================== RIGHT-WALL TRAIN (flow along +Z toward front)
+/* ================================================================== LEFT-WALL TRAIN (flow along +Z toward open front)
    Components oriented with ry=PI/2 so local +X → world +Z.
 */
 const RY = PI / 2;
 function placeZ(g, x, y, z) { return place(g, x, y, z, 0, RY); }
 
-// Z stations along right wall (inches from BACK; +Z toward door)
+// Z stations along LEFT wall (inches from BACK; +Z toward OPEN front)
 const Z = {
   // +Z toward front/door. Stations measured from BACK wall. Flow: stub(back) → … → house(front).
   stub: 4 * IN,
@@ -837,28 +836,24 @@ const Z = {
   house: 32 * IN,
 };
 
-/* Inlet from PT → stubs (routes AROUND equipment, never through) */
-// PT tee → aisle west of AIO → toward FRONT past tanks → across near door → along right wall BACK to stub → up
+/* Inlet from PT → LEFT-wall train near back (around tank shells) */
 {
-  const aisleX = 18 * IN;                 // west of AIO (AIO at 28")
-  const crossZ = DEPTH - 10 * IN;         // near front, clear of brine (brine at 18" from back)
   pex([
-    [PT_X + .22, .25, PT_Z + .12],
-    [aisleX, .25, PT_Z + .12],
-    [aisleX, .25, crossZ],
-    [trainX, .25, crossZ],
+    [PT_X - .18, .25, PT_Z + .05],   // leave tank toward left/open aisle
+    [trainX + .20, .25, PT_Z + .05],
+    [trainX + .12, .25, Z.stub + .06],
     [trainX, .25, Z.stub],
     [trainX, trainY, Z.stub],
   ], { clips: false });
-  placeZ(ballValve(), trainX, trainY, Z.stub);  // main inlet ISO near back
-  label('From pressure tank', 'aisle → front cross → right wall → back-right train', [aisleX, 0.55, DEPTH / 2], 'minor');
+  placeZ(ballValve(), trainX, trainY, Z.stub);
+  label('From pressure tank', 'short run to LEFT-wall train', [PT_X - .05, 0.55, PT_Z + .25], 'minor');
 }
 
 /* P0 */
 {
   const t = tapTee({ kind: 'P', gauge: true, psi: 55, name: 'P0' });
   placeZ(t.g, trainX, trainY, Z.p0);
-  label('P0', 'well / pre-iron · gauge + transducer', [trainX - .22, trainY + .28, Z.p0], 'tap');
+  label('P0', 'well / pre-iron · gauge + transducer', [trainX + .22, trainY + .28, Z.p0], 'tap');
 }
 pex([[trainX, trainY, Z.stub + .04], [trainX, trainY, Z.p0 - .04]], { clips: false, start: false, end: false });
 
@@ -867,7 +862,7 @@ placeZ(union(), trainX, trainY, Z.spin - .12);
 {
   const f = f76s(); placeZ(f.g, trainX, trainY, Z.spin);
   // AFV flush is routed downhill to BACK-RIGHT receptor air gap (see drain section) — no local uphill run
-  label('Rusco 1-140-F + AFV', '140 mesh · sump clear · AFV own timer', [trainX - .28, trainY + .14, Z.spin]);
+  label('Rusco 1-140-F + AFV', '140 mesh · sump clear · AFV own timer', [trainX + .28, trainY + .14, Z.spin]);
   addCylObs('spin_sump', trainX, 0, Z.spin, 0.07, trainY - .42, trainY - .08);  // below pipe CL
 }
 placeZ(union(), trainX, trainY, Z.spin + .14);
@@ -877,60 +872,57 @@ pex([[trainX, trainY, Z.spin + .18], [trainX, trainY, Z.meter - .16]], { clips: 
 /* Meter + leak SV */
 {
   const m = waterMeter(); placeZ(m.g, trainX, trainY, Z.meter);
-  label('DAE MJP-100P pulse meter', 'plastic body · 1 gal/pulse', [trainX - .28, trainY + .12, Z.meter]);
+  label('DAE MJP-100P pulse meter', 'plastic body · 1 gal/pulse', [trainX + .28, trainY + .12, Z.meter]);
 }
 {
   const v = gcValve(); placeZ(v.g, trainX, trainY, Z.leak);
-  label('LEAK SHUTOFF · GC NS201', 'NC spring-return · 24 VDC', [trainX - .30, trainY + .20, Z.leak], 'warn');
+  label('LEAK SHUTOFF · GC NS201', 'NC spring-return · 24 VDC', [trainX + .30, trainY + .20, Z.leak], 'warn');
 }
 placeZ(ballValve(), trainX, trainY, Z.leak + .12);
 pex([[trainX, trainY, Z.meter + .12], [trainX, trainY, Z.leak - .08]], { clips: false, start: false, end: false });
 
-/* --- Jump to AIO / softener along BACK wall at trainY, outside tank radii --- */
-// After leak: go back along right wall a bit, then left along back wall in the 3" gap? 
-// Aisle header at runZ=16" from back (forward of tank shells), then up to Clack heads.
+/* --- Jump LEFT-wall train → AIO/soft (aisle header along OPEN FRONT, clears all shells) --- */
 {
-  const runZ = 16 * IN;   // forward of AIO/soft (toward door); clears tank shells by ~3"
-  const headY = 1.50;         // near Clack bypass height
-  // right wall → aisle runZ → to AIO
+  // runZ ahead of brine (BRINE_Z+r ≈ 37") and short of DEPTH (40")
+  const runZ = 38 * IN;
+  const headY = 1.50;
+  // Out along left wall to front aisle, across, then back to AIO head
   pex([
     [trainX, trainY, Z.leak + .16],
     [trainX, trainY, runZ],
-    [trainX - .20, trainY, runZ],
+    [trainX + .20, trainY, runZ],
     [AIO_X + .05, trainY, runZ],
     [AIO_X + .05, headY, runZ],
-    [AIO_X + .05, headY, AIO_Z + .22],
+    [AIO_X + .05, headY, AIO_Z + .24],
   ], { clips: false });
-  place(union(), AIO_X + .05, headY, AIO_Z + .20, 0, 0);
-  // through AIO bypass to softener: drop to trainY for the lateral so it does NOT
-  // cross the AIO inlet riser (at AIO_X+.05, runZ, trainY→headY). Jog with elbows.
+  place(union(), AIO_X + .05, headY, AIO_Z + .22, 0, 0);
+  // AIO out → soft in via same front aisle (offset X so return doesn't sit on feed)
   pex([
-    [AIO_X - .05, headY, AIO_Z + .22],
+    [AIO_X - .05, headY, AIO_Z + .24],
     [AIO_X - .05, headY, runZ],
-    [AIO_X - .05, trainY, runZ],           // down elbow — clears inlet riser
-    [SOFT_X - .05, trainY, runZ],          // lateral at train height
-    [SOFT_X - .05, headY - SOFT_DY, runZ], // up to soft head
-    [SOFT_X - .05, headY - SOFT_DY, SOFT_Z + .22],
+    [AIO_X - .05, trainY, runZ],
+    [SOFT_X - .05, trainY, runZ],
+    [SOFT_X - .05, headY - SOFT_DY, runZ],
+    [SOFT_X - .05, headY - SOFT_DY, SOFT_Z + .24],
   ], { clips: false, start: false });
-  place(union(), AIO_X - .05, headY, AIO_Z + .20, 0, 0);
-  place(union(), SOFT_X - .05, headY - SOFT_DY, SOFT_Z + .20, 0, 0);
-  place(union(), SOFT_X + .05, headY - SOFT_DY, SOFT_Z + .20, 0, 0);
-  // softener out → trainY lateral → right wall at ret (same jog rule)
+  place(union(), AIO_X - .05, headY, AIO_Z + .22, 0, 0);
+  place(union(), SOFT_X - .05, headY - SOFT_DY, SOFT_Z + .22, 0, 0);
+  place(union(), SOFT_X + .05, headY - SOFT_DY, SOFT_Z + .22, 0, 0);
+  // Soft out → front aisle → back to LEFT-wall return
   pex([
-    [SOFT_X + .05, headY - SOFT_DY, SOFT_Z + .22],
+    [SOFT_X + .05, headY - SOFT_DY, SOFT_Z + .24],
     [SOFT_X + .05, headY - SOFT_DY, runZ],
     [SOFT_X + .05, trainY, runZ],
-    [trainX - .20, trainY, runZ],
+    [trainX + .20, trainY, runZ],
     [trainX, trainY, runZ],
     [trainX, trainY, Z.ret],
   ], { clips: false });
-  // P1 near AIO out
   {
     const t = tapTee({ kind: 'P', name: 'P1' });
-    place(t.g, AIO_X + .18, headY, runZ);
-    label('P1', 'post-iron', [AIO_X + .18, headY + .22, runZ], 'tap');
+    place(t.g, AIO_X + .18, headY, runZ - 2 * IN);
+    label('P1', 'post-iron', [AIO_X + .18, headY + .22, runZ - 2 * IN], 'tap');
   }
-  label('↔ AIO / softener', 'aisle header · clears tank shells', [W / 2, trainY + .08, runZ], 'minor');
+  label('↔ AIO / softener', 'front-aisle header · clears tank shells', [W / 2, trainY + .08, runZ], 'minor');
 }
 
 /* brine line softener → brine (above aisle, not through tanks) */
@@ -944,21 +936,21 @@ cable([
 /* P2 / Big Blue / P3 / limiter */
 {
   const t = tapTee({ kind: 'P', name: 'P2' }); placeZ(t.g, trainX, trainY, Z.p2);
-  label('P2', 'post-softener', [trainX - .22, trainY + .24, Z.p2], 'tap');
+  label('P2', 'post-softener', [trainX + .22, trainY + .24, Z.p2], 'tap');
 }
 placeZ(ballValve(), trainX, trainY, Z.bb - .14);
 placeZ(union(), trainX, trainY, Z.bb - .08);
 placeZ(bigBlue(), trainX, trainY, Z.bb);
-label('Big Blue 20" · 5 µm', 'Pentek 150233 · cartridge pull ↓', [trainX - .30, trainY + .12, Z.bb]);
+label('Big Blue 20" · 5 µm', 'Pentek 150233 · cartridge pull ↓', [trainX + .30, trainY + .12, Z.bb]);
 addCylObs('bigblue', trainX, 0, Z.bb, 0.095, trainY - .68, trainY - .04);  // housing below header
 placeZ(union(), trainX, trainY, Z.bb + .10);
 placeZ(ballValve(), trainX, trainY, Z.bb + .16);
 {
   const t = tapTee({ kind: 'P', name: 'P3' }); placeZ(t.g, trainX, trainY, Z.p3);
-  label('P3', 'post-5 µm / pre-limiter', [trainX - .22, trainY + .24, Z.p3], 'tap');
+  label('P3', 'post-5 µm / pre-limiter', [trainX + .22, trainY + .24, Z.p3], 'tap');
 }
 placeZ(neoflo(), trainX, trainY, Z.lim);
-label('neoFlo 6 gpm limiter', 'the only restrictor', [trainX - .28, trainY + .08, Z.lim], 'minor');
+label('neoFlo 6 gpm limiter', 'the only restrictor', [trainX + .28, trainY + .08, Z.lim], 'minor');
 pex([[trainX, trainY, Z.ret + .02], [trainX, trainY, Z.p2 - .04]], { clips: false, start: false, end: false });
 pex([[trainX, trainY, Z.p2 + .04], [trainX, trainY, Z.bb - .18]], { clips: false, start: false, end: false });
 pex([[trainX, trainY, Z.bb + .20], [trainX, trainY, Z.p3 - .04]], { clips: false, start: false, end: false });
@@ -968,7 +960,7 @@ pex([[trainX, trainY, Z.p3 + .04], [trainX, trainY, Z.lim - .04]], { clips: fals
 placeZ(ballValve(), trainX, trainY, Z.uvIn);
 placeZ(union(), trainX, trainY, Z.uvIn + .08);
 {
-  const UVX = trainX - 0.12;  // offset into room so header at trainX clears chamber
+  const UVX = trainX + 0.22;  // offset into room so header at trainX clears chamber
   const base = 28 * IN, h = 40 * IN;
   const U = new THREE.Group(); U.position.set(UVX, 0, Z.uv); scene.add(U);
   cy(U, .046, h, M.ssBrushed, 0, base + h / 2, 0, 48);
@@ -983,33 +975,34 @@ placeZ(union(), trainX, trainY, Z.uvIn + .08);
     std({ color: 0x6b5a9a, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false }),
     U, [0, base + h + 18 * IN, 0]);
   cylDecal(U, labelTex(512, 256, '#f3f3f3', [{ t: 'VIQUA', c: '#0a5fb4', f: 'bold 80px Arial', y: 80 }, { t: 'PRO20 · 650653', c: '#111', f: 'bold 44px Arial', y: 150 }, { t: 'NSF/ANSI 55 Class A', c: '#333', f: '30px Arial', y: 205 }]), .0465, .12, 1.7, base + h / 2);
-  label('VIQUA PRO20 UV · vertical', 'base ≈28″ · lamp pull ≥36″ UP · no separate UV bypass', [UVX - .32, base + h / 2, Z.uv]);
-  addCylObs('uv', UVX, 0, Z.uv, 0.050, base, base + h + .08);
+  label('VIQUA PRO20 UV · vertical', 'base ≈28″ · lamp pull ≥36″ UP · no separate UV bypass', [UVX + .25, base + h / 2, Z.uv]);
+  addCylObs('uv', UVX, 0, Z.uv, 0.048, base, base + h + .08);
   // pipe into UV from limiter: drop/offset around UV body
   pex([
     [trainX, trainY, Z.lim + .05],
     [trainX, trainY, Z.uvIn - .02],
   ], { clips: false, start: false, end: false });
+  // stop at outer surface of UV chamber (obs r=0.050)
   pex([
     [trainX, trainY, Z.uvIn + .12],
-    [UVX + .05, trainY, Z.uv],
+    [UVX - 0.055, trainY, Z.uv],
   ], { clips: false });
   // out of UV up to train then to UV SV
   pex([
-    [UVX + .05, trainY + .08, Z.uv],
-    [trainX, trainY + .08, Z.uv + .08],
+    [UVX - 0.055, trainY + .08, Z.uv],
+    [trainX, trainY + .08, Z.uv + .10],
     [trainX, trainY, Z.uvSv - .10],
   ], { clips: false });
 }
 placeZ(union(), trainX, trainY, Z.uvSv - .08);
 {
   const v = gcValve(); placeZ(v.g, trainX, trainY, Z.uvSv);
-  label('UV SHUTOFF · GC NS201', 'COMMcenter interlock · fail-closed', [trainX - .32, trainY + .20, Z.uvSv], 'warn');
+  label('UV SHUTOFF · GC NS201', 'COMMcenter interlock · fail-closed', [trainX + .32, trainY + .20, Z.uvSv], 'warn');
 }
 placeZ(ballValve(), trainX, trainY, Z.uvSv + .12);
 {
   const t = tapTee({ kind: 'P', gauge: true, psi: 49, name: 'P4' }); placeZ(t.g, trainX, trainY, Z.p4);
-  label('P4', 'post-UV · gauge + transducer', [trainX - .22, trainY + .28, Z.p4], 'tap');
+  label('P4', 'post-UV · gauge + transducer', [trainX + .22, trainY + .28, Z.p4], 'tap');
 }
 placeZ(ballValve(), trainX, trainY, Z.house - .08);
 pex([[trainX, trainY, Z.uvSv + .16], [trainX, trainY, Z.p4 - .04]], { clips: false, start: false, end: false });
@@ -1017,7 +1010,7 @@ pex([[trainX, trainY, Z.p4 + .04], [trainX, trainY, Z.house - .12]], { clips: fa
 // House leaves up into ceiling chase — jog 2.5" into aisle so it does not share
 // the bypass riser centerline at (trainX, Z.house).
 {
-  const hx = trainX - 2.5 * IN;
+  const hx = trainX + 2.5 * IN;
   pex([
     [trainX, trainY, Z.house - .04],
     [trainX, trainY, Z.house],
@@ -1025,7 +1018,7 @@ pex([[trainX, trainY, Z.p4 + .04], [trainX, trainY, Z.house - .12]], { clips: fa
     [hx, H - .05, Z.house],
   ], { clips: false, end: false });
 }
-label('TO HOUSE · treated', 'after P4 · ceiling chase', [trainX - .28, trainY + .1, Z.house]);
+label('TO HOUSE · treated', 'after P4 · ceiling chase', [trainX + .28, trainY + .1, Z.house]);
 
 /* --- Main whole-train bypass at ~96" (option A) — padlocked CLOSED + reed --- */
 {
@@ -1042,7 +1035,7 @@ label('TO HOUSE · treated', 'after P4 · ceiling chase', [trainX - .28, trainY 
   const b = ballValve({ closed: true, lockable: true, lock: true, reed: true, tag });
   placeZ(b, trainX, y, (z0 + z1) / 2);
   pex([[trainX, y, (z0 + z1) / 2 + .08], [trainX, y, z1]], { clips: false, start: false, end: false });
-  label('MAIN BYPASS · PADLOCKED CLOSED', 'option A · single lockable valve + reed → HA alert', [trainX - .35, y + .14, DEPTH / 2], 'warn');
+  label('MAIN BYPASS · PADLOCKED CLOSED', 'option A · single lockable valve + reed → HA alert', [trainX + .40, y + .14, DEPTH / 2], 'warn');
   addBoxObs('main_bypass_valve', trainX, y, (z0 + z1) / 2, 0.12, 0.16, 0.12);
 }
 
@@ -1065,10 +1058,10 @@ label('TO HOUSE · treated', 'after P4 · ceiling chase', [trainX - .28, trainY 
   // air-gap ends (four lines)
   // Tips sit just above rim — gravity lines fall to these y values (no rise into the gap)
   const ends = {
-    afv: [DX - .06, RIM + .035, DZ + .05, .017],
-    aio: [DX - .01, RIM + .045, DZ + .055, .0085],
-    soft: [DX + .04, RIM + .040, DZ + .02, .0085],
-    brine: [DX + .06, RIM + .030, DZ - .04, .0065],
+    afv:   [DX - .10, RIM + .040, DZ + .08, .017],
+    aio:   [DX + .08, RIM + .045, DZ + .06, .0085],
+    soft:  [DX + .10, RIM + .040, DZ - .04, .0085],
+    brine: [DX - .08, RIM + .035, DZ - .08, .0065],
   };
   bx(scene, .02, .004, .12, M.galv, DX + .02, RIM + .14, DZ + .02);
   for (const k in ends) {
@@ -1077,41 +1070,38 @@ label('TO HOUSE · treated', 'after P4 · ceiling chase', [trainX - .28, trainY 
     mk(new THREE.TorusGeometry(r + .004, .0025, 8, 20), M.galv, scene, [x, y + .02, z], [PI / 2, 0, 0]);
   }
   decal(scene, labelTex(256, 64, '#ffffff', [{ t: 'AIR GAPS ≥ 2× dia', c: '#b0281e', f: 'bold 30px Arial', y: 34 }]), .09, .022, DX - .05, RIM + .22, DZ + .06);
-  label('3″ DRAIN standpipe + receptor', 'BACK-RIGHT · against right wall · P-trap · all air gaps', [DX - .22, RIM + 0.35, DZ - .08], 'drain');
+  label('3″ DRAIN standpipe + receptor', 'BACK-RIGHT · open end · P-trap · all air gaps', [DX - .22, RIM + 0.35, DZ - .08], 'drain');
   addCylObs('drain3', DX, 0, DZ, 1.6 * IN, 0, RIM - .02);  // standpipe body; air-gap zone above rim free
 
   // Drain line routes — OUTSIDE tank cylinders.
   // Gravity lines (AFV after local dump, brine overflow) and preferred Clack drains: monotonically decreasing Y to tip.
   const af = ends.afv, ao = ends.aio, so = ends.soft, br = ends.brine;
 
-  // AFV: pressurized flush from AFV outlet down to tip above rim (short; spin is near back-right)
+  // AFV: hug left-aisle corridor (x≈0.26 clears PT/BB/UV), forward to open front, across to tip
   {
     const afvOutY = trainY - .505;
     const pts = [
       [trainX, afvOutY, Z.spin],
-      [trainX - .04, afvOutY - .04, Z.spin],
-      [trainX - .06, (afvOutY + af[1]) / 2, (Z.spin + DZ) / 2],
-      [af[0], af[1] + .01, af[2]],
+      [0.26, afvOutY - .05, Z.spin + .03],
+      [0.26, 0.62, 38.5 * IN],
+      [DX - .10, 0.55, 38.5 * IN],
+      [DX - .10, 0.520, DZ + .10],
+      [af[0], af[1] + .008, af[2]],
       [af[0], af[1], af[2]],
     ];
     cable(pts, .017, M.pvcWhite);
     trackGravity(pts, .017, 'afv_flush');
   }
 
-  // AIO backwash (pressurised Clack): south into aisle (clears soft), east past brine, continuously DOWN to tip
+  // AIO backwash: +Z at AIO X (left of brine), across open front, to tip
   {
-    const aisleZ = 22 * IN; // forward of AIO/soft shells (toward door)
-    const eastX = Math.min(BRINE_X + 9 * IN, DX - .22); // east of brine; soft uses eastX+2.5"
-    // Drop below Big Blue housing (obs y0 ≈ trainY-0.68) before swinging +Z toward receptor
-    // Exit below aisle header (trainY) so drain does not cross head-height PEX
+    const frontZ = 38.5 * IN;
     const pts = [
-      [AIO_X + .12, 1.47, AIO_Z + .15],
-      [AIO_X + .18, 1.30, aisleZ],
-      [eastX, 1.10, aisleZ],
-      [eastX, 0.70, aisleZ],
-      [eastX, 0.52, aisleZ],
-      [DX - .14, 0.515, (aisleZ + DZ) / 2],
-      [DX - .12, 0.510, DZ + .06],
+      [AIO_X + .10, 1.47, AIO_Z + .18],
+      [AIO_X + .10, 1.15, frontZ],
+      [DX + .02, 0.90, frontZ],
+      [DX + .02, 0.65, frontZ],
+      [ao[0], 0.55, 10 * IN],
       [ao[0], ao[1] + .004, ao[2]],
       [ao[0], ao[1], ao[2]],
     ];
@@ -1119,19 +1109,16 @@ label('TO HOUSE · treated', 'after P4 · ceiling chase', [trainX - .28, trainY 
     trackGravity(pts, .0085, 'aio_backwash');
   }
 
-  // Softener regen (pressurised): south into aisle, east of brine, continuously DOWN to tip
+  // Softener regen: east in soft/brine Z-gap (16–19"), then to tip
   {
     const softOutY = 1.47 - SOFT_DY;
-    const aisleZ = 22 * IN;
-    const eastX = Math.min(BRINE_X + 9 * IN, DX - .22) + 2.5 * IN; // offset from AIO drop
+    const gapZ = 17.5 * IN; // between soft max (16") and brine min (19")
     const pts = [
-      [SOFT_X + .12, softOutY, SOFT_Z + .15],
-      [SOFT_X + .18, softOutY - .10, aisleZ],
-      [eastX, softOutY - .20, aisleZ],
-      [eastX, 0.70, aisleZ],
-      [eastX, 0.52, aisleZ],
-      [DX - .02, 0.515, (aisleZ + DZ) / 2],
-      [DX + .01, 0.505, DZ + .025],
+      [SOFT_X + .16, softOutY, SOFT_Z + .16],
+      [SOFT_X + .22, softOutY - .12, gapZ],
+      [DX - .12, 0.95, gapZ],
+      [DX - .12, 0.65, gapZ],
+      [so[0], 0.55, 8 * IN],
       [so[0], so[1] + .004, so[2]],
       [so[0], so[1], so[2]],
     ];
@@ -1139,16 +1126,14 @@ label('TO HOUSE · treated', 'after P4 · ceiling chase', [trainX - .28, trainY 
     trackGravity(pts, .0085, 'soft_regen');
   }
 
-  // Brine overflow: GRAVITY ONLY — forward past Big Blue, drop below its housing, east, then to tip
+  // Brine overflow: GRAVITY ONLY — forward out of shell, then east to standpipe X, back to tip
   {
-    const clearZ = 26 * IN; // forward of Big Blue (Z.bb=19") and of AIO/soft aisle drops (22")
     const pts = [
-      [BRINE_X + .26, .70, BRINE_Z],
-      [BRINE_X + .26, .55, clearZ],       // forward first (west of Big Blue X)
-      [BRINE_X + .30, .50, clearZ],       // below Big Blue y0
-      [DX - .06, 0.50, clearZ],           // east at low Y, forward of Big Blue
-      [DX - .02, 0.50, DZ + .08],         // stay forward of soft tip approach
-      [DX + .02, 0.495, DZ - .03],
+      [BRINE_X + .28, .70, BRINE_Z + .02],
+      [BRINE_X + .32, .60, BRINE_Z + .28],
+      [DX - .08, 0.55, Math.min(BRINE_Z + .30, DEPTH - .04)],
+      [DX - .08, 0.515, 10 * IN],
+      [br[0], 0.505, DZ - .06],
       [br[0], br[1] + .004, br[2]],
       [br[0], br[1], br[2]],
     ];
@@ -1162,17 +1147,18 @@ label('TO HOUSE · treated', 'after P4 · ceiling chase', [trainX - .28, trainY 
 /* Track drain cables as segments approximately for intersection (sample key spans) */
 /* drain trackSeg samples omitted — cable() paths checked visually; segs recorded via wrapped seg for pex */
 
-/* ================================================================== NEMA + HA (back-right high) + outlets
-   Back plate FLAT on back wall (z≈0). Body extends +Z into the room. Door hinged on left, swings into aisle.
+/* ================================================================== NEMA + HA (BACK wall near open right, high) + outlets
+   Back plate FLAT on BACK wall. Body +Z into bay. Door hinged LEFT, swings toward OPEN right (+X).
+   Left-wall mount was considered; back-near-right is better: keeps train clear, door opens into open space, high above drain air gaps.
 */
 {
   const ew = 20 * IN, eh = 16 * IN, ed = 8 * IN;
-  const EX = W - 18 * IN, EY = 86 * IN, EZ = 0.4 * IN;  // back plate just off back wall; clear of right-wall train
+  const EX = W - 16 * IN, EY = 80 * IN, EZ = 0.4 * IN;  // back near open right · ~80″ AFF
   const E = new THREE.Group(); E.position.set(EX, EY, EZ); scene.add(E);
   E.userData.enclosure = {
     name: 'nema',
-    wall: 'back',          // mounted on back wall (normal +Z into room)
-    doorOpenNormal: [0, 0, 1], // open door faces into room (+Z)
+    wall: 'back',
+    doorOpenNormal: [1, 0, 0.35], // open door faces toward OPEN right (+X) with slight +Z
     hinge: 'left',
   };
   const grey = std({ color: 0x9ea4a9, roughness: .42, metalness: .2 });
@@ -1187,47 +1173,77 @@ label('TO HOUSE · treated', 'after P4 · ceiling chase', [trainX - .28, trainY 
   // door: hinged at left front lip, swung ~100° into room (open toward aisle, not into wall)
   const door = new THREE.Group(); door.name = 'nema_door';
   door.position.set(-ew / 2, 0, ed);
-  door.rotation.y = 1.75; // open outward into +X/+Z aisle quadrant — clear of wall
+  door.rotation.y = 1.85; // ~106° open toward OPEN right (+X) — into empty space
   E.add(door);
   bx(door, ew, eh, .004, std({ color: 0x9ea4a9, roughness: .4, metalness: .2, transparent: true, opacity: .38, depthWrite: false, side: THREE.DoubleSide }), ew / 2, 0, 0);
   // HA Green + DIN gear inside box (near backplate, visible when door open)
   rb(E, .10, .10, .03, .012, M.haGreen, -.12, -.12, .05);
   rb(E, .08, .06, .03, .006, std({ color: 0xe9eae6, roughness: .5 }), .1, -.1, .05);
   decal(E, labelTex(256, 64, '#2b2f33', [{ t: 'NEMA 4X 20×16×8', c: '#fff', f: 'bold 28px Arial', y: 36 }], '#fff'), .14, .035, 0, eh / 2 + .02, ed + .01, 0, 0);
-  label('Controls · NEMA 20×16×8', 'HA Green · door swings into room', [EX, EY + .28, EZ + ed + .12], 'elec');
+  label('Controls · NEMA 20×16×8', 'HA Green · door → OPEN right', [EX, EY + .28, EZ + ed + .12], 'elec');
   addBoxObs('nema', EX, EY, EZ + ed / 2, ew * 0.95, eh * 0.95, ed * 0.9);
   window.__ENCLOSURES = window.__ENCLOSURES || [];
   window.__ENCLOSURES.push({
     name: 'nema',
     wall: 'back',
     mount: [EX, EY, EZ],
-    doorOpenNormal: [0, 0, 1],
+    doorOpenNormal: [1, 0, 0.35],
     bodyIntoRoom: [0, 0, 1],
   });
+  window.__MOUNTS = window.__MOUNTS || [];
+  window.__MOUNTS.push({ name: 'nema_backplate', wall: 'back', pos: [EX, EY, EZ] });
 }
 
-// Outlets on back wall HIGH (avoid tanks at 48")
-for (const x of [18 * IN, 50 * IN]) {
+// 120 V outlets on BACK wall HIGH (existing walls only)
+for (const x of [24 * IN, 48 * IN]) {
   bx(scene, .07, .10, .04, M.galv, x, 84 * IN, 0.03);
-  label('120 V outlet', '~84″ AFF (above tanks)', [x, 2.25, 0.10], 'elec minor');
+  label('120 V outlet', '~84″ AFF · back wall', [x, 2.25, 0.10], 'elec minor');
+  window.__MOUNTS = window.__MOUNTS || [];
+  window.__MOUNTS.push({ name: 'outlet_' + Math.round(x / IN), wall: 'back', pos: [x, 84 * IN, 0.03] });
 }
-// stub-outs marker low right
-bx(scene, .05, .08, .04, std({ color: 0xc55a11, roughness: .5 }), W - .03, 12 * IN, DEPTH - 10 * IN);
-label('Stub-outs', 'low on right wall (photo)', [W - .22, 0.45, DEPTH - 10 * IN], 'minor');
+// AFV / UV receptacles on LEFT wall near train
+for (const z of [Z.spin, Z.uv]) {
+  bx(scene, .04, .10, .07, M.galv, 0.03, 72 * IN, z);
+  label('120 V', 'left wall · AFV/UV', [0.18, 1.95, z], 'elec minor');
+  window.__MOUNTS.push({ name: 'outlet_left_' + Math.round(z / IN), wall: 'left', pos: [0.03, 72 * IN, z] });
+}
 
 // Flood sensors
-cy(scene, .036, .026, M.white, 30 * IN, .013, 14 * IN, 32);
+cy(scene, .036, .026, M.white, 10 * IN, .013, 14 * IN, 32);
 cy(scene, .036, .026, M.white, BRINE_X - .15, .013, BRINE_Z - .15, 32);
-label('Shelly Flood', 'train', [30 * IN, .08, 14 * IN], 'elec minor');
+label('Shelly Flood', 'train', [10 * IN, .08, 14 * IN], 'elec minor');
 label('Shelly Flood', 'brine', [BRINE_X - .15, .08, BRINE_Z - .15], 'elec minor');
 
-/* COMMcenter / UV controller on right wall above UV */
+/* COMMcenter / UV controller on LEFT wall above UV */
 {
-  const C = new THREE.Group(); C.position.set(W - .06, 1.95, Z.uv + .12); scene.add(C);
+  const C = new THREE.Group(); C.position.set(0.06, 1.95, Z.uv + .12); scene.add(C);
   rb(C, .18, .14, .06, .01, std({ color: 0xe3e5e6, roughness: .45 }), 0, 0, 0);
-  decal(C, lcdTex(['UV 98%', '6.0 GPM  OK'], '#0f2a44', '#8fd3ff'), .08, .04, -.02, .01, .032);
-  label('VIQUA controller + COMMcenter', 'interlock → UV shutoff', [W - .25, 2.12, Z.uv + .12], 'elec');
+  decal(C, lcdTex(['UV 98%', '6.0 GPM  OK'], '#0f2a44', '#8fd3ff'), .08, .04, .02, .01, .032);
+  label('VIQUA controller + COMMcenter', 'LEFT wall · interlock → UV shutoff', [0.35, 2.12, Z.uv + .12], 'elec');
+  window.__MOUNTS = window.__MOUNTS || [];
+  window.__MOUNTS.push({ name: 'uv_controller', wall: 'left', pos: [0.06, 1.95, Z.uv + .12] });
 }
+
+
+/* Mount registry — everything wall-mounted must land on BACK or LEFT */
+(function () {
+  window.__MOUNTS = window.__MOUNTS || [];
+  const pushL = (name, z, y = trainY) => window.__MOUNTS.push({ name, wall: 'left', pos: [trainX, y, z] });
+  pushL('train_inlet', Z.stub);
+  pushL('spin_afv', Z.spin);
+  pushL('meter', Z.meter);
+  pushL('leak_sv', Z.leak);
+  pushL('big_blue', Z.bb);
+  pushL('uv', Z.uv);
+  pushL('uv_sv', Z.uvSv);
+  pushL('house_out', Z.house);
+  pushL('main_bypass', DEPTH / 2, 96 * IN);
+  window.__MOUNTS.push({ name: 'pressure_tank_floor', wall: null, floor: true, pos: [PT_X, 0, PT_Z] });
+  window.__MOUNTS.push({ name: 'aio_floor', wall: null, floor: true, pos: [AIO_X, 0, AIO_Z] });
+  window.__MOUNTS.push({ name: 'soft_floor', wall: null, floor: true, pos: [SOFT_X, 0, SOFT_Z] });
+  window.__MOUNTS.push({ name: 'brine_floor', wall: null, floor: true, pos: [BRINE_X, 0, BRINE_Z] });
+  window.__MOUNTS.push({ name: 'drain_floor', wall: null, floor: true, pos: [DRAIN_X, 0, DRAIN_Z] });
+})();
 
 /* lights */
 scene.add(new THREE.HemisphereLight(0xdfe8f2, 0x3a3631, 0.4));
@@ -1242,42 +1258,36 @@ const fill = new THREE.DirectionalLight(0xdfe9ff, 0.75); fill.position.set(-2, 4
 const shop = new THREE.PointLight(0xfff4e2, 4.5, 8, 2); shop.position.set(W / 2, H - 0.15, DEPTH / 2); scene.add(shop);
 
 
-/* ---- Orientation compass (floor + wall tags) — door/front at +Z ---- */
+/* ---- Orientation compass — OPEN front (+Z) and OPEN right (+X); walls BACK + LEFT ---- */
 {
   const mkTag = (txt, x, y, z, ry = 0, cls = 'warn') => {
     label(txt, '', [x, y, z], cls + ' minor');
     const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; scene.add(g);
-    decal(g, labelTex(256, 64, '#1a1c1e', [{ t: txt, c: '#ffe08a', f: 'bold 40px Arial', y: 38 }], '#ffe08a'), .22, .05, 0, 0, 0);
+    decal(g, labelTex(256, 64, '#1a1c1e', [{ t: txt, c: '#ffe08a', f: 'bold 36px Arial', y: 38 }], '#ffe08a'), .26, .05, 0, 0, 0);
   };
-  // Floor strips
-  bx(scene, W * 0.5, 0.002, 0.04, std({ color: 0xc0181e, roughness: .6 }), W / 2, 0.005, DEPTH - 0.06); // front
-  bx(scene, W * 0.5, 0.002, 0.04, std({ color: 0x2a6fbf, roughness: .6 }), W / 2, 0.005, 0.06); // back
-  mkTag('FRONT / DOOR', W / 2, 0.04, DEPTH - 0.18, 0, 'warn');
-  mkTag('BACK', W / 2, 0.04, 0.18, Math.PI, 'warn');
-  mkTag('LEFT', 0.18, 0.04, DEPTH / 2, Math.PI / 2, 'warn');
-  mkTag('RIGHT', W - 0.18, 0.04, DEPTH / 2, -Math.PI / 2, 'warn');
-  label('← LEFT (PT)', 'door on this side', [0.35, 0.35, DEPTH * 0.55], 'minor');
-  label('RIGHT (drain + train) →', '3″ BACK-RIGHT', [W - 0.45, 0.35, DEPTH * 0.55], 'minor');
+  bx(scene, W * 0.5, 0.002, 0.04, std({ color: 0xc0181e, roughness: .6 }), W / 2, 0.005, DEPTH - 0.06); // open front
+  bx(scene, W * 0.5, 0.002, 0.04, std({ color: 0x2a6fbf, roughness: .6 }), W / 2, 0.005, 0.06); // back wall
+  mkTag('OPEN FRONT', W / 2, 0.04, DEPTH - 0.18, 0, 'warn');
+  mkTag('BACK WALL', W / 2, 0.04, 0.18, Math.PI, 'warn');
+  mkTag('LEFT WALL', 0.18, 0.04, DEPTH / 2, Math.PI / 2, 'warn');
+  mkTag('OPEN RIGHT', W - 0.18, 0.04, DEPTH / 2, -Math.PI / 2, 'warn');
+  label('← LEFT WALL (train + PT)', 'treatment train', [0.45, 0.35, DEPTH * 0.55], 'minor');
+  label('OPEN RIGHT (drain) →', '3″ BACK-RIGHT · no wall', [W - 0.50, 0.35, DEPTH * 0.55], 'minor');
 }
 
 /* ================================================================== VIEWS */
 const VIEWS = {
-  // Front/doorway at +Z looking down −Z → +X on screen-right (tank LEFT, drain RIGHT).
-  orbit: { p: [W / 2 - 1.6, 2.3, DEPTH + 2.4], t: [W / 2, 1.05, DEPTH * 0.35], up: [0, 1, 0] },
+  // Front stands in OPEN front looking −Z at BACK wall → tank screen-LEFT, drain screen-RIGHT.
+  orbit: { p: [W / 2 + 0.4, 2.3, DEPTH + 2.5], t: [W / 2, 1.05, DEPTH * 0.35], up: [0, 1, 0] },
   front: { p: [W / 2, 1.55, DEPTH + 2.6], t: [W / 2, 1.05, DEPTH * 0.28], up: [0, 1, 0] },
   top:   { p: [W / 2, 5.6, DEPTH / 2], t: [W / 2, 0, DEPTH / 2], up: [0, 0, -1] },
-  right: { p: [W + 2.8, 1.55, DEPTH * 0.45], t: [W * 0.55, 1.15, DEPTH * 0.35], up: [0, 1, 0] },
-  back:  { p: [W / 2, 1.45, DEPTH * 0.72], t: [W / 2, 1.05, 0.15], up: [0, 1, 0] },
-  inlet: { p: [trainX - 0.9, 1.35, Z.stub + 0.55], t: [trainX - 0.05, 1.2, Z.stub], up: [0, 1, 0] },
-  tanks: { p: [W / 2 - 0.15, 1.4, DEPTH * 0.75], t: [AIO_X + .2, 1.0, AIO_Z + .05], up: [0, 1, 0] },
-  uv:    { p: [trainX - 1.3, 1.35, Z.uv], t: [trainX - 0.05, 1.2, Z.uv], up: [0, 1, 0] },
-  controls: { p: [W - 0.5, 2.2, 1.4], t: [W - 18 * IN, 86 * IN, 0.25], up: [0, 1, 0] },
-  drain: { p: [W + 0.35, 1.05, DRAIN_Z + 1.15], t: [DRAIN_X - 0.05, 0.55, DRAIN_Z], up: [0, 1, 0] },
-  // Close-ups for pipe-clearance inspection
-  train: { p: [trainX - 1.15, 1.35, Z.bb], t: [trainX - 0.05, 1.15, Z.bb], up: [0, 1, 0] },
-  bypassClose: { p: [trainX - 1.0, bypassY - 0.1, DEPTH * 0.45], t: [trainX, bypassY, (Z.stub + Z.house) / 2], up: [0, 1, 0] },
-  drainClose: { p: [W + 0.15, 0.85, DRAIN_Z + 0.55], t: [DRAIN_X, 0.5, DRAIN_Z], up: [0, 1, 0] },
-  aisleCross: { p: [W * 0.45, 1.6, DEPTH + 0.15], t: [W * 0.55, 0.55, DEPTH - 10 * IN], up: [0, 1, 0] },
+  left:  { p: [-2.4, 1.55, DEPTH * 0.45], t: [W * 0.35, 1.15, DEPTH * 0.35], up: [0, 1, 0] },
+  back:  { p: [W / 2, 1.45, DEPTH * 0.85], t: [W / 2, 1.05, 0.15], up: [0, 1, 0] },
+  inlet: { p: [trainX + 1.1, 1.35, Z.stub + 0.55], t: [trainX + 0.05, 1.2, Z.stub], up: [0, 1, 0] },
+  tanks: { p: [W / 2 + 0.2, 1.4, DEPTH * 0.85], t: [AIO_X + .2, 1.0, AIO_Z + .05], up: [0, 1, 0] },
+  uv:    { p: [trainX + 1.4, 1.35, Z.uv], t: [trainX + 0.05, 1.2, Z.uv], up: [0, 1, 0] },
+  controls: { p: [W - 0.2, 2.15, 1.55], t: [W - 16 * IN, 80 * IN, 0.25], up: [0, 1, 0] },
+  drain: { p: [W + 0.55, 1.05, DRAIN_Z + 1.25], t: [DRAIN_X - 0.05, 0.55, DRAIN_Z], up: [0, 1, 0] },
 };
 const ceiling = scene.getObjectByName('ceiling');
 const _v = new THREE.Vector3();
@@ -1377,45 +1387,45 @@ const UNITS = [];
   const UNITDATA = [
     ['tank', S({ name: 'Existing pressure tank', model: 'Existing well tank + tank tee (reused)', what: 'Stores pressurised water from the well pump so the pump does not start for every tap opening.', flow: 'Back-left corner of the closet; feeds the treatment train via the aisle pipe route.', vendor: 'Existing — reused', price: '$0' }), [PT_X, .8, PT_Z], [.52, 1.6, .52]],
     ['P0', TAP('P0', 'Right-wall train start: after the pressure tank feed, before the Rusco spin-down.'), [trainX, trainY + .1, Z.p0], [.1, .32, .1]],
-    ['f76s', S({ name: 'Spin-down sediment filter', model: 'Rusco 1-140-F · 1" · 140 mesh (≈104 µm) · clear cover', what: 'Catches sand, grit and iron flakes; sediment spins into the clear cover and is flushed by the AFV.', flow: 'Right wall near BACK (by the 3″ drain), after P0, before the pulse meter.', vendor: 'Agri Sales', price: '$49.75' }), [trainX, trainY - .14, Z.spin], [.2, .45, .16]],
+    ['f76s', S({ name: 'Spin-down sediment filter', model: 'Rusco 1-140-F · 1" · 140 mesh (≈104 µm) · clear cover', what: 'Catches sand, grit and iron flakes; sediment spins into the clear cover and is flushed by the AFV.', flow: 'LEFT wall near BACK, after P0, before the pulse meter.', vendor: 'Agri Sales', price: '$49.75' }), [trainX, trainY - .14, Z.spin], [.2, .45, .16]],
     ['mv876', S({ name: 'Automatic flush valve', model: 'Rusco AFV · 120 V timer · 1/2" full-port brass · NEMA 4', what: 'Opens the filter flush port on its own timer. Plugged into its own receptacle — no HA control needed.', flow: 'On the spin-down flush port; drain to 3″ receptor air gap.', vendor: 'SupplyHouse', price: '$384.62' }), [trainX, trainY - .47, Z.spin], [.12, .15, .12]],
-    ['drain3', S({ name: '3" standpipe + receptor + P-trap', model: '3" DWV standpipe with receptor funnel, P-trap, to EXISTING 3" drain', what: 'One common, code-trapped receptor. Every treatment drain empties through its own air gap (≥ 2× diameter above the rim).', flow: 'BACK-RIGHT corner against the right wall (~2″ off right wall, ~4.5″ from back).', vendor: 'Plumber (on site)', price: 'TBD' }), [DRAIN_X, DRAIN_RIM / 2, DRAIN_Z], [.28, DRAIN_RIM + .1, .28]],
+    ['drain3', S({ name: '3" standpipe + receptor + P-trap', model: '3" DWV standpipe with receptor funnel, P-trap, to EXISTING 3" drain', what: 'One common, code-trapped receptor. Every treatment drain empties through its own air gap (≥ 2× diameter above the rim).', flow: 'BACK-RIGHT at open right end of back wall (~4″ off open end, ~3.5″ from back).', vendor: 'Plumber (on site)', price: 'TBD' }), [DRAIN_X, DRAIN_RIM / 2, DRAIN_Z], [.28, DRAIN_RIM + .1, .28]],
     ['airGaps', S({ name: 'Air-gap clip bracket', model: 'Galvanised strap + one clip per drain line above the rim', what: 'Holds each drain end so the open gap stays visible and back-siphoning cannot occur.', flow: 'Above the 3″ receptor.', vendor: 'Plumber', price: 'TBD' }), [DRAIN_X, DRAIN_RIM + .12, DRAIN_Z], [.16, .1, .16]],
     ['aioDrain', S({ name: 'Iron filter backwash line', model: 'Atmos-AIO / Clack WS1 drain (¾", pressurised)', what: 'Carries the ~6.5 gpm iron-filter backwash. Routed outside the tank shell to its own air gap.', flow: 'From AIO head south into aisle, east of brine, downhill to BACK-RIGHT receptor.', vendor: 'Plumber', price: 'TBD' }), [AIO_X + 7 * IN, 0.9, AIO_Z - .1], [.08, 1.0, .2]],
     ['softDrain', S({ name: 'Softener regeneration drain', model: 'Clack WS1 softener drain (pressurised)', what: 'Own line and own air gap; never shares a pipe with the brine overflow.', flow: 'From softener head south into aisle, east of brine, downhill to BACK-RIGHT receptor.', vendor: 'Plumber', price: 'TBD' }), [SOFT_X + 8 * IN, 0.85, SOFT_Z - .1], [.08, 1.0, .2]],
     ['brineOver', S({ name: 'Brine tank overflow (gravity)', model: '½" overflow from brine elbow', what: 'Gravity only — continuous fall, never teed into a pressurised drain. Own air gap at the receptor.', flow: 'From brine overflow elbow toward the BACK-RIGHT receptor.', vendor: 'Plumber', price: 'TBD' }), [BRINE_X + .2, .55, BRINE_Z + .1], [.2, .3, .35]],
-    ['afvLine', S({ name: 'AFV flush drain line', model: '1" Sch 40 PVC to receptor air gap', what: 'Carries short AFV flush bursts from the local funnel to the 3″ receptor.', flow: 'Along the right wall low, from spin-down (near back) downhill to BACK-RIGHT receptor.', vendor: 'Plumber', price: 'TBD' }), [trainX - .08, 0.4, (Z.spin + DRAIN_Z) / 2], [.08, .1, .4]],
-    ['meter', S({ name: 'Pulse water meter', model: 'DAE MJP-100P · 1" · 1 gallon per pulse', what: 'Counts every gallon and proves shut-off valves really closed.', flow: 'Right wall after spin-down, before leak shut-off.', vendor: 'DAE Control', price: '$119.00' }), [trainX, trainY, Z.meter], [.18, .16, .14]],
-    ['leakValve', S({ name: 'Leak shut-off valve', ...NS, what: 'Automatic main shut-off. Spring closes it if a leak sensor trips or power is lost. Bypassed when the main bypass is open.', flow: 'Right wall after the meter, before the jump to AIO/softener.' }), [trainX, trainY + .05, Z.leak], [.14, .22, .12]],
+    ['afvLine', S({ name: 'AFV flush drain line', model: '1" Sch 40 PVC to receptor air gap', what: 'Carries AFV flush bursts from the LEFT-wall filter across the aisle to the 3″ receptor.', flow: 'From LEFT-wall spin-down across aisle, continuously downhill to BACK-RIGHT receptor.', vendor: 'Plumber', price: 'TBD' }), [W / 2, 0.55, 12 * IN], [.4, .1, .2]],
+    ['meter', S({ name: 'Pulse water meter', model: 'DAE MJP-100P · 1" · 1 gallon per pulse', what: 'Counts every gallon and proves shut-off valves really closed.', flow: 'LEFT wall after spin-down, before leak shut-off.', vendor: 'DAE Control', price: '$119.00' }), [trainX, trainY, Z.meter], [.18, .16, .14]],
+    ['leakValve', S({ name: 'Leak shut-off valve', ...NS, what: 'Automatic main shut-off. Spring closes it if a leak sensor trips or power is lost. Bypassed when the main bypass is open.', flow: 'LEFT wall after the meter, before the jump to AIO/softener.' }), [trainX, trainY + .05, Z.leak], [.14, .22, .12]],
     ['aio', S({ name: 'Iron / sulphur filter', model: 'Aquatell Atmos-AIO · Clack WS1 · 10×54 · Katalox Light', what: 'Injects air to oxidise iron and sulphur and traps particles, then backwashes to the drain.', flow: 'Back wall, east of the pressure tank. Confirm Clack bypass with order.', vendor: 'Aquatell', price: '$1,198.99' }), [AIO_X, .9, AIO_Z], [.3, 1.8, .32]],
     ['P1', TAP('P1', 'After the Atmos-AIO, on the aisle header before the softener.'), [AIO_X + .18, 1.55, 16 * IN], [.1, .3, .1]],
     ['softener', S({ name: 'Water softener', model: 'AquaHome Clack WS1 64K · 12×48 · 2.0 ft³ · EZsalt', what: 'Removes hardness. Sized for post-AIO hardness. EZsalt reports salt level.', flow: 'Back wall, east of the AIO; brine tank in the aisle.', vendor: 'AquaHome Supply', price: '$1,799.00' }), [SOFT_X, .85, SOFT_Z], [.34, 1.7, .36]],
     ['brine', S({ name: 'Brine tank + EZsalt', model: '18×33 brine tank · EZsalt level sensor', what: 'Holds salt for softener regeneration. Overflow is gravity-only to the receptor.', flow: 'Aisle, forward of the softener; fill from the aisle.', vendor: 'AquaHome (with softener)', price: 'Included' }), [BRINE_X, .45, BRINE_Z], [.48, .95, .48]],
-    ['P2', TAP('P2', 'Right wall after return from softener, before Big Blue.'), [trainX, trainY + .1, Z.p2], [.1, .3, .1]],
+    ['P2', TAP('P2', 'LEFT wall after return from softener, before Big Blue.'), [trainX, trainY + .1, Z.p2], [.1, .3, .1]],
     ['isoBB1', ISO('Isolation valve (Big Blue in)', 'After P2, before Big Blue.'), [trainX, trainY + .02, Z.bb - .14], [.1, .14, .1]],
-    ['bigblue', S({ name: 'Big Blue 5 µm cartridge filter', model: 'Pentek 150233 20" + DGD-5005-20', what: 'Catches fine particles so UV can shine through clear water. Cartridge pulls downward.', flow: 'Right wall mid-depth, after softener return.', vendor: 'WaterFiltersOnline / HD', price: '$74.99 + cartridges' }), [trainX, trainY - .2, Z.bb], [.22, .65, .2]],
+    ['bigblue', S({ name: 'Big Blue 5 µm cartridge filter', model: 'Pentek 150233 20" + DGD-5005-20', what: 'Catches fine particles so UV can shine through clear water. Cartridge pulls downward.', flow: 'LEFT wall mid-depth, after softener return.', vendor: 'WaterFiltersOnline / HD', price: '$74.99 + cartridges' }), [trainX, trainY - .2, Z.bb], [.22, .65, .2]],
     ['P3', TAP('P3', 'After Big Blue, before the 6 gpm limiter.'), [trainX, trainY + .1, Z.p3], [.1, .3, .1]],
-    ['neoflo', S({ name: '6 gpm flow limiter', model: 'neoFlo FRSS-6-100FF · 316 SS', what: 'Caps flow at 6 gpm so water never races through the UV. Do NOT also install the PRO20 bundled restrictor.', flow: 'Right wall after P3, before UV.', vendor: 'FreshWaterSystems', price: '$48.95' }), [trainX, trainY, Z.lim], [.1, .08, .1]],
+    ['neoflo', S({ name: '6 gpm flow limiter', model: 'neoFlo FRSS-6-100FF · 316 SS', what: 'Caps flow at 6 gpm so water never races through the UV. Do NOT also install the PRO20 bundled restrictor.', flow: 'LEFT wall after P3, before UV.', vendor: 'FreshWaterSystems', price: '$48.95' }), [trainX, trainY, Z.lim], [.1, .08, .1]],
     ['isoUVin', ISO('UV isolation valve (in)', 'After limiter, before PRO20.'), [trainX, trainY + .02, Z.uvIn], [.1, .14, .1]],
-    ['uv', S({ name: 'UV disinfection system', model: 'VIQUA PRO20 650653 · NSF/ANSI 55 Class A (bundled restrictor NOT installed)', what: 'Ultraviolet light kills bacteria and viruses. Mount vertical with ≥36″ lamp/sleeve pull up — fits under 106″ with base ≈28–30″ AFF. No separate UV bypass (option A).', flow: 'Right wall mid-front of train; base ~28″ AFF; ≥36″ lamp pull UP clears 106″.', vendor: 'AquaHome Supply', price: '$3,264.00' }), [trainX - .06, 28 * IN + 20 * IN, Z.uv], [.14, 1.1, .14]],
-    ['uvValve', S({ name: 'UV shut-off valve', ...NS, what: 'Only opens while UV reports healthy. Spring closes on fault or power loss.', flow: 'Right wall after PRO20, before P4.' }), [trainX, trainY + .05, Z.uvSv], [.14, .22, .12]],
-    ['bypass', S({ name: 'Main whole-train bypass (padlocked closed)', model: 'Raven L-610T001-NL 1" lockable ball valve + padlock + reed switch', what: 'Lets untreated water go around the entire treatment train for emergencies. Kept locked closed. Opening also bypasses the leak shutoff. Option A: this is the ONLY padlock — no separate UV bypass.', flow: 'High loop at ~96″ AFF along the right wall, from inlet riser to house riser.', vendor: 'SupplyHouse', price: '$29.53' }), [trainX, bypassY, DEPTH / 2], [.14, .22, .16]],
-    ['reed', S({ name: 'Bypass reed switch', model: 'Tane FM-106 magnetic reed switch', what: 'If anyone opens the main bypass, Home Assistant raises a persistent UNTREATED WATER alert.', flow: 'On the main bypass valve handle; wired to the ESP32.', vendor: 'Amazon', price: 'Price not verified' }), [trainX - .05, bypassY + .08, DEPTH / 2], [.06, .06, .06]],
+    ['uv', S({ name: 'UV disinfection system', model: 'VIQUA PRO20 650653 · NSF/ANSI 55 Class A (bundled restrictor NOT installed)', what: 'Ultraviolet light kills bacteria and viruses. Mount vertical with ≥36″ lamp/sleeve pull up — fits under 106″ with base ≈28–30″ AFF. No separate UV bypass (option A).', flow: 'LEFT wall mid-front of train; base ~28″ AFF; ≥36″ lamp pull UP clears 106″.', vendor: 'AquaHome Supply', price: '$3,264.00' }), [trainX + .08, 28 * IN + 20 * IN, Z.uv], [.14, 1.1, .14]],
+    ['uvValve', S({ name: 'UV shut-off valve', ...NS, what: 'Only opens while UV reports healthy. Spring closes on fault or power loss.', flow: 'LEFT wall after PRO20, before P4.' }), [trainX, trainY + .05, Z.uvSv], [.14, .22, .12]],
+    ['bypass', S({ name: 'Main whole-train bypass (padlocked closed)', model: 'Raven L-610T001-NL 1" lockable ball valve + padlock + reed switch', what: 'Lets untreated water go around the entire treatment train for emergencies. Kept locked closed. Opening also bypasses the leak shutoff. Option A: this is the ONLY padlock — no separate UV bypass.', flow: 'High loop at ~96″ AFF along the LEFT wall, from inlet riser to house riser.', vendor: 'SupplyHouse', price: '$29.53' }), [trainX, bypassY, DEPTH / 2], [.14, .22, .16]],
+    ['reed', S({ name: 'Bypass reed switch', model: 'Tane FM-106 magnetic reed switch', what: 'If anyone opens the main bypass, Home Assistant raises a persistent UNTREATED WATER alert.', flow: 'On the main bypass valve handle; wired to the ESP32.', vendor: 'Amazon', price: 'Price not verified' }), [trainX + .08, bypassY + .08, DEPTH / 2], [.06, .06, .06]],
     ['P4', TAP('P4', 'After UV shut-off, before house supply.'), [trainX, trainY + .1, Z.p4], [.1, .32, .1]],
     ['isoHouse', ISO('Isolation valve (to house)', 'Last valve after P4; doubles as main outlet isolation.'), [trainX, trainY + .02, Z.house - .08], [.1, .14, .1]],
-    ['enclosure', S({ name: 'Controls enclosure (NEMA 4X)', model: 'NEMA 4X · 20×16×8 in · hinged door + backplate (door shown open)', what: 'Holds DIN PSUs, Shelly 1, relay, ESP32, HA Green, OpenSprinkler reserve.', flow: 'Back-right wall high, above brine/softener area.', vendor: 'AutomationDirect', price: '≈ $200–350' }), [W - 18 * IN, 86 * IN, 4 * IN], [.55, .45, .30]],
-    ['haGreen', S({ name: 'Home Assistant Green', model: 'Home Assistant Green hub (12 V adapter included)', what: 'Local smart-home brain: sensors, dashboards, alerts, automations — no cloud required.', flow: 'Inside the NEMA enclosure.', vendor: 'CloudFree', price: '$198.85' }), [W - 18 * IN - .05, 84 * IN, 3 * IN], [.14, .14, .1]],
+    ['enclosure', S({ name: 'Controls enclosure (NEMA 4X)', model: 'NEMA 4X · 20×16×8 in · hinged door + backplate (door shown open)', what: 'Holds DIN PSUs, Shelly 1, relay, ESP32, HA Green, OpenSprinkler reserve.', flow: 'BACK wall near open right, ~80″ AFF; door hinged left opens toward OPEN right.', vendor: 'AutomationDirect', price: '≈ $200–350' }), [W - 16 * IN, 80 * IN, 4 * IN], [.55, .45, .30]],
+    ['haGreen', S({ name: 'Home Assistant Green', model: 'Home Assistant Green hub (12 V adapter included)', what: 'Local smart-home brain: sensors, dashboards, alerts, automations — no cloud required.', flow: 'Inside the NEMA enclosure.', vendor: 'CloudFree', price: '$198.85' }), [W - 16 * IN - .05, 78 * IN, 3 * IN], [.14, .14, .1]],
     ['hdr24', S({ name: '24 V power supply', model: 'Mean Well HDR-60-24', what: 'Powers both shut-off valve coils and the interposing relay.', flow: 'Inside NEMA, top DIN rail.', vendor: 'DigiKey', price: '$20.90' }), [W - 18 * IN, 88 * IN, 3 * IN], [.08, .1, .1]],
     ['hdr5', S({ name: '5 V power supply (fused)', model: 'Mean Well HDR-15-5 + fuse', what: 'Fused 5 V for ESP32 and five pressure transducers.', flow: 'Inside NEMA, top DIN rail.', vendor: 'DigiKey', price: '$12.50' }), [W - 16 * IN, 88 * IN, 3 * IN], [.06, .1, .1]],
     ['relay', S({ name: 'Interposing relay', model: 'AutomationDirect ZL-RLS1-24', what: 'COMMcenter “UV healthy” contact energises this relay; only then does 24 V reach the UV shut-off.', flow: 'Inside NEMA.', vendor: 'AutomationDirect', price: '$34.50' }), [W - 15 * IN, 88 * IN, 3 * IN], [.06, .1, .1]],
     ['shelly1', S({ name: 'Leak valve driver', model: 'Shelly 1 Gen4 UL', what: 'Switches 24 V to the leak shut-off. Flood sensors can trip it directly.', flow: 'Inside NEMA.', vendor: 'Shelly US', price: '$27.99' }), [W - 14 * IN, 88 * IN, 3 * IN], [.06, .1, .1]],
     ['esp32', S({ name: 'ESP32 sensor controller', model: 'ESP32-DevKitC + 2× ADS1115 + NOYITO + dividers', what: 'Reads taps, meter pulses, bypass reed and UV intensity for Home Assistant.', flow: 'Inside NEMA, middle row.', vendor: 'Amazon', price: '~$40 combined' }), [W - 18 * IN, 85 * IN, 3 * IN], [.2, .08, .1]],
     ['opensprinkler', S({ name: 'OpenSprinkler 3.x (reserved)', model: 'OpenSprinkler 3.x · 24 VAC · expandable', what: 'Wi-Fi sprinkler controller space reserved in the enclosure — not purchased yet.', flow: 'Inside NEMA, reserved slot.', vendor: 'OpenSprinkler (not purchased)', price: '≈ $150–250' }), [W - 16 * IN, 83 * IN, 3 * IN], [.16, .1, .08]],
-    ['flood1', S({ name: 'Leak sensor (train)', model: 'Shelly Flood Gen4', what: 'Floor sensor under the right-wall train; trips leak valve even if HA is down.', flow: 'Floor near spin-down / meter.', vendor: 'Shelly US', price: '$39.20' }), [trainX - .25, .02, Z.meter], [.1, .05, .1]],
+    ['flood1', S({ name: 'Leak sensor (train)', model: 'Shelly Flood Gen4', what: 'Floor sensor under the LEFT-wall train; trips leak valve even if HA is down.', flow: 'Floor near spin-down / meter.', vendor: 'Shelly US', price: '$39.20' }), [trainX + .25, .02, Z.meter], [.1, .05, .1]],
     ['flood2', S({ name: 'Leak sensor (brine)', model: 'Shelly Flood Gen4', what: 'Detects brine/softener drain leaks.', flow: 'Floor beside the brine tank.', vendor: 'Shelly US', price: '$39.20' }), [BRINE_X - .15, .02, BRINE_Z + .15], [.1, .05, .1]],
-    ['uvCtrl', S({ name: 'VIQUA PRO20 controller', model: 'Included with PRO20', what: 'Runs the UV lamp and shows status/alarms.', flow: 'Right wall above the UV chamber.', vendor: 'with PRO20', price: 'Included' }), [W - .06, 1.95, Z.uv + .12], [.2, .16, .1]],
-    ['comm', S({ name: 'VIQUA COMMcenter', model: '270272-R COMMcenter kit', what: 'Dry contact closed only while UV is healthy — drives the interposing relay.', flow: 'Beside the UV controller on the right wall.', vendor: 'Aquatell', price: '$855.00' }), [W - .06, 1.95, Z.uv + .28], [.14, .12, .08]],
-    ['isoInlet', ISO('Isolation valve (train inlet)', 'Right wall at stubs; doubles as main inlet isolation for the whole train.'), [trainX, trainY + .02, Z.stub], [.1, .14, .1]],
+    ['uvCtrl', S({ name: 'VIQUA PRO20 controller', model: 'Included with PRO20', what: 'Runs the UV lamp and shows status/alarms.', flow: 'LEFT wall above the UV chamber.', vendor: 'with PRO20', price: 'Included' }), [0.06, 1.95, Z.uv + .12], [.2, .16, .1]],
+    ['comm', S({ name: 'VIQUA COMMcenter', model: '270272-R COMMcenter kit', what: 'Dry contact closed only while UV is healthy — drives the interposing relay.', flow: 'Beside the UV controller on the LEFT wall.', vendor: 'Aquatell', price: '$855.00' }), [0.06, 1.95, Z.uv + .28], [.14, .12, .08]],
+    ['isoInlet', ISO('Isolation valve (train inlet)', 'LEFT wall at stubs; doubles as main inlet isolation for the whole train.'), [trainX, trainY + .02, Z.stub], [.1, .14, .1]],
   ];
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
   const unitBox = new THREE.BoxGeometry(1, 1, 1);
@@ -1475,13 +1485,16 @@ window.unitIds = () => UNITS.map(u => u.userData.unit.id);
 window.__exportCollision = () => JSON.stringify({
   segs: PIPE_SEGS, obs: OBSTACLES, gravity: GRAVITY_SEGS,
   enclosures: window.__ENCLOSURES || [],
+  mounts: window.__MOUNTS || [],
+  walls: window.__WALLS || { back: true, left: true, right: false, front: false },
   landmarks: {
     tank: [PT_X, 0.8, PT_Z],
     drain: [DRAIN_X, DRAIN_RIM / 2, DRAIN_Z],
-    door: [15 * IN, 0.1, DEPTH],
+    openFront: [W / 2, 0.1, DEPTH],
+    openRight: [W, 0.1, DEPTH / 2],
     W, DEPTH, H,
   },
-  views: { front: VIEWS.front, top: VIEWS.top },
+  views: { front: VIEWS.front, top: VIEWS.top, left: VIEWS.left },
 });
 window.__projectFront = () => {
   // Project tank & drain with the Front camera; return NDC x (left=-1..right=+1)
@@ -1496,7 +1509,7 @@ window.__projectFront = () => {
     const vv = V(p[0], p[1], p[2]).project(cam);
     return { x: vv.x, y: vv.y };
   };
-  return { tank: toNdc([PT_X, 0.9, PT_Z]), drain: toNdc([DRAIN_X, 0.55, DRAIN_Z]), door: toNdc([15 * IN, 0.2, DEPTH]) };
+  return { tank: toNdc([PT_X, 0.9, PT_Z]), drain: toNdc([DRAIN_X, 0.55, DRAIN_Z]), openFront: toNdc([W / 2, 0.2, DEPTH]), openRight: toNdc([W, 0.2, DEPTH / 2]) };
 };
 
 const params = new URLSearchParams(location.search);
