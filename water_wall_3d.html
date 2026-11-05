@@ -67,7 +67,7 @@
 <div id="inspect" role="dialog" aria-label="Equipment details"><button class="x" aria-label="Close">×</button><div class="body"></div></div>
 <div id="ui">
   <div class="t">Well water treatment closet — 3D</div>
-  <div class="s">rev closet-v4 · 72″ W × 40″ D × 106″ H · door L/front · PT back-left · 3″ drain BACK-RIGHT · main bypass option A · no RO in closet</div>
+  <div class="s">rev closet-v4b · 72″ W × 40″ D × 106″ H · door L/front · PT back-left · 3″ drain BACK-RIGHT · main bypass option A · no RO in closet</div>
   <div>
     <button id="btnLabels" class="on" title="Toggle labels (L)">Labels (L)</button>
     <button id="btnWalls" class="on" title="Ghost walls">Ghost walls</button>
@@ -902,20 +902,24 @@ pex([[trainX, trainY, Z.meter + .12], [trainX, trainY, Z.leak - .08]], { clips: 
     [AIO_X + .05, headY, AIO_Z + .22],
   ], { clips: false });
   place(union(), AIO_X + .05, headY, AIO_Z + .20, 0, 0);
-  // through AIO bypass (visual short) to softener side
+  // through AIO bypass to softener: drop to trainY for the lateral so it does NOT
+  // cross the AIO inlet riser (at AIO_X+.05, runZ, trainY→headY). Jog with elbows.
   pex([
     [AIO_X - .05, headY, AIO_Z + .22],
     [AIO_X - .05, headY, runZ],
-    [SOFT_X - .05, headY - SOFT_DY, runZ],
+    [AIO_X - .05, trainY, runZ],           // down elbow — clears inlet riser
+    [SOFT_X - .05, trainY, runZ],          // lateral at train height
+    [SOFT_X - .05, headY - SOFT_DY, runZ], // up to soft head
     [SOFT_X - .05, headY - SOFT_DY, SOFT_Z + .22],
   ], { clips: false, start: false });
   place(union(), AIO_X - .05, headY, AIO_Z + .20, 0, 0);
   place(union(), SOFT_X - .05, headY - SOFT_DY, SOFT_Z + .20, 0, 0);
   place(union(), SOFT_X + .05, headY - SOFT_DY, SOFT_Z + .20, 0, 0);
-  // softener out → back to right wall at ret
+  // softener out → trainY lateral → right wall at ret (same jog rule)
   pex([
     [SOFT_X + .05, headY - SOFT_DY, SOFT_Z + .22],
     [SOFT_X + .05, headY - SOFT_DY, runZ],
+    [SOFT_X + .05, trainY, runZ],
     [trainX - .20, trainY, runZ],
     [trainX, trainY, runZ],
     [trainX, trainY, Z.ret],
@@ -1010,8 +1014,18 @@ placeZ(ballValve(), trainX, trainY, Z.uvSv + .12);
 placeZ(ballValve(), trainX, trainY, Z.house - .08);
 pex([[trainX, trainY, Z.uvSv + .16], [trainX, trainY, Z.p4 - .04]], { clips: false, start: false, end: false });
 pex([[trainX, trainY, Z.p4 + .04], [trainX, trainY, Z.house - .12]], { clips: false, start: false, end: false });
-pex([[trainX, trainY, Z.house - .04], [trainX, trainY, Z.house], [trainX, H - .05, Z.house]], { clips: false, end: false });
-label('TO HOUSE · treated', 'after P4', [trainX - .2, trainY + .1, Z.house]);
+// House leaves up into ceiling chase — jog 2.5" into aisle so it does not share
+// the bypass riser centerline at (trainX, Z.house).
+{
+  const hx = trainX - 2.5 * IN;
+  pex([
+    [trainX, trainY, Z.house - .04],
+    [trainX, trainY, Z.house],
+    [hx, trainY, Z.house],
+    [hx, H - .05, Z.house],
+  ], { clips: false, end: false });
+}
+label('TO HOUSE · treated', 'after P4 · ceiling chase', [trainX - .28, trainY + .1, Z.house]);
 
 /* --- Main whole-train bypass at ~96" (option A) — padlocked CLOSED + reed --- */
 {
@@ -1051,10 +1065,10 @@ label('TO HOUSE · treated', 'after P4', [trainX - .2, trainY + .1, Z.house]);
   // air-gap ends (four lines)
   // Tips sit just above rim — gravity lines fall to these y values (no rise into the gap)
   const ends = {
-    afv: [DX - .04, RIM + .035, DZ + .03, .017],
-    aio: [DX + .02, RIM + .045, DZ + .04, .0085],
-    soft: [DX + .045, RIM + .040, DZ + .01, .0085],
-    brine: [DX + .05, RIM + .030, DZ - .03, .0065],
+    afv: [DX - .06, RIM + .035, DZ + .05, .017],
+    aio: [DX - .01, RIM + .045, DZ + .055, .0085],
+    soft: [DX + .04, RIM + .040, DZ + .02, .0085],
+    brine: [DX + .06, RIM + .030, DZ - .04, .0065],
   };
   bx(scene, .02, .004, .12, M.galv, DX + .02, RIM + .14, DZ + .02);
   for (const k in ends) {
@@ -1087,16 +1101,17 @@ label('TO HOUSE · treated', 'after P4', [trainX - .2, trainY + .1, Z.house]);
   // AIO backwash (pressurised Clack): south into aisle (clears soft), east past brine, continuously DOWN to tip
   {
     const aisleZ = 22 * IN; // forward of AIO/soft shells (toward door)
-    const eastX = Math.min(BRINE_X + 11 * IN, DX - .14); // east of brine
+    const eastX = Math.min(BRINE_X + 9 * IN, DX - .22); // east of brine; soft uses eastX+2.5"
     // Drop below Big Blue housing (obs y0 ≈ trainY-0.68) before swinging +Z toward receptor
+    // Exit below aisle header (trainY) so drain does not cross head-height PEX
     const pts = [
-      [AIO_X + .05, 1.47, AIO_Z + .20],
-      [AIO_X + .05, 1.35, aisleZ],
-      [eastX, 1.15, aisleZ],
+      [AIO_X + .12, 1.47, AIO_Z + .15],
+      [AIO_X + .18, 1.30, aisleZ],
+      [eastX, 1.10, aisleZ],
       [eastX, 0.70, aisleZ],
       [eastX, 0.52, aisleZ],
-      [DX - .08, 0.515, (aisleZ + DZ) / 2],
-      [DX - .08, 0.510, DZ + .04],
+      [DX - .14, 0.515, (aisleZ + DZ) / 2],
+      [DX - .12, 0.510, DZ + .06],
       [ao[0], ao[1] + .004, ao[2]],
       [ao[0], ao[1], ao[2]],
     ];
@@ -1108,15 +1123,15 @@ label('TO HOUSE · treated', 'after P4', [trainX - .2, trainY + .1, Z.house]);
   {
     const softOutY = 1.47 - SOFT_DY;
     const aisleZ = 22 * IN;
-    const eastX = Math.min(BRINE_X + 11 * IN, DX - .14);
+    const eastX = Math.min(BRINE_X + 9 * IN, DX - .22) + 2.5 * IN; // offset from AIO drop
     const pts = [
-      [SOFT_X + .05, softOutY, SOFT_Z + .20],
-      [SOFT_X + .05, softOutY - .08, aisleZ],
-      [eastX, softOutY - .18, aisleZ],
+      [SOFT_X + .12, softOutY, SOFT_Z + .15],
+      [SOFT_X + .18, softOutY - .10, aisleZ],
+      [eastX, softOutY - .20, aisleZ],
       [eastX, 0.70, aisleZ],
       [eastX, 0.52, aisleZ],
-      [DX - .06, 0.515, (aisleZ + DZ) / 2],
-      [DX - .06, 0.505, DZ + .03],
+      [DX - .02, 0.515, (aisleZ + DZ) / 2],
+      [DX + .01, 0.505, DZ + .025],
       [so[0], so[1] + .004, so[2]],
       [so[0], so[1], so[2]],
     ];
@@ -1124,14 +1139,16 @@ label('TO HOUSE · treated', 'after P4', [trainX - .2, trainY + .1, Z.house]);
     trackGravity(pts, .0085, 'soft_regen');
   }
 
-  // Brine overflow: GRAVITY ONLY — forward into aisle first (clears Big Blue at Z.bb), east, then back to tip
+  // Brine overflow: GRAVITY ONLY — forward past Big Blue, drop below its housing, east, then to tip
   {
+    const clearZ = 26 * IN; // forward of Big Blue (Z.bb=19") and of AIO/soft aisle drops (22")
     const pts = [
       [BRINE_X + .26, .70, BRINE_Z],
-      [BRINE_X + .28, .58, BRINE_Z + .16],
-      [DX - .12, 0.52, BRINE_Z + .18],
-      [DX - .08, 0.50, (BRINE_Z + DZ) / 2],
-      [DX - .06, 0.495, DZ + .02],
+      [BRINE_X + .26, .55, clearZ],       // forward first (west of Big Blue X)
+      [BRINE_X + .30, .50, clearZ],       // below Big Blue y0
+      [DX - .06, 0.50, clearZ],           // east at low Y, forward of Big Blue
+      [DX - .02, 0.50, DZ + .08],         // stay forward of soft tip approach
+      [DX + .02, 0.495, DZ - .03],
       [br[0], br[1] + .004, br[2]],
       [br[0], br[1], br[2]],
     ];
@@ -1256,6 +1273,11 @@ const VIEWS = {
   uv:    { p: [trainX - 1.3, 1.35, Z.uv], t: [trainX - 0.05, 1.2, Z.uv], up: [0, 1, 0] },
   controls: { p: [W - 0.5, 2.2, 1.4], t: [W - 18 * IN, 86 * IN, 0.25], up: [0, 1, 0] },
   drain: { p: [W + 0.35, 1.05, DRAIN_Z + 1.15], t: [DRAIN_X - 0.05, 0.55, DRAIN_Z], up: [0, 1, 0] },
+  // Close-ups for pipe-clearance inspection
+  train: { p: [trainX - 1.15, 1.35, Z.bb], t: [trainX - 0.05, 1.15, Z.bb], up: [0, 1, 0] },
+  bypassClose: { p: [trainX - 1.0, bypassY - 0.1, DEPTH * 0.45], t: [trainX, bypassY, (Z.stub + Z.house) / 2], up: [0, 1, 0] },
+  drainClose: { p: [W + 0.15, 0.85, DRAIN_Z + 0.55], t: [DRAIN_X, 0.5, DRAIN_Z], up: [0, 1, 0] },
+  aisleCross: { p: [W * 0.45, 1.6, DEPTH + 0.15], t: [W * 0.55, 0.55, DEPTH - 10 * IN], up: [0, 1, 0] },
 };
 const ceiling = scene.getObjectByName('ceiling');
 const _v = new THREE.Vector3();
