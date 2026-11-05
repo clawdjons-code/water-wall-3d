@@ -98,7 +98,7 @@
   <div class="k" style="margin-top:3px;color:#dfe5ea"><b>Wiring — simplified routes (not a wiring diagram)</b></div>
   <div class="r"><span class="sw" style="background:#222;border:1px solid #ddd"></span>120 VAC L/N → PSUs + Shelly 1</div>
   <div class="r"><span class="sw" style="background:#d42a2a"></span>24 VDC → relay, Shelly → leak valve</div>
-  <div class="r"><span class="sw" style="background:#8a5a2b"></span>24 VAC → OpenSprinkler; 620-202 → Shelly → F76S MV876B</div>
+  <div class="r"><span class="sw" style="background:#8a5a2b"></span>24 VAC → OpenSprinkler</div>
   <div class="r"><span class="sw" style="background:#ff8a1c"></span>Protected 5 V (fused) → ESP32 5V + transducers</div>
   <div class="r"><span class="sw" style="background:#a050e0"></span>UV interlock: COMMcenter → relay → UV valve</div>
   <div class="r"><span class="sw" style="background:#1f62b8"></span>Signals (taps, pulse, reed) · Ethernet</div>
@@ -623,34 +623,33 @@ function waterMeter() {   // DAE MJP-100P: lead-free potable PLASTIC body (per B
   decal(g, labelTex(256, 64, null, [{ t: '⟶  FLOW', f: 'bold 40px Arial', c: '#e6e9ec', y: 32 }], null), .07, .017, 0, .009, .0272, 0, 0, true);
   return { g, cab: V(.05, .055, .02) };
 }
-// WW-F76S-v1: Resideo Braukmann F76S1023 1" reverse-rinse filter + MV876B1018 auto-backwash (replaces Rusco 1-100-F)
+// WW-RUSCO-v1: Rusco 1-140-F 1" spin-down (140 mesh) + Rusco AFV timed automatic flush valve (replaces Resideo F76S + MV876B)
 function f76s() {
   const g = new THREE.Group();
-  for (const s of [-1, 1]) {   // supplied union tailpieces + nuts
-    cx(g, .031, .026, M.brass, s * .075, 0, 0, 6);
-    cx(g, .0225, .05, M.brass, s * .108, 0, 0, 24);
+  const pvc = std({ color: 0xf1f1ee, roughness: .5 });
+  for (const s of [-1, 1]) {   // 1" PVC sockets + male adapters → LF brass
+    cx(g, .024, .05, pvc, s * .07, 0, 0, 24);
+    cx(g, .02, .03, pvc, s * .105, 0, 0, 6);
+    cx(g, .021, .02, M.brass, s * .128, 0, 0, 6);
   }
-  rb(g, .12, .085, .09, .014, M.brass, 0, .004, -.045);                  // cast brass head
-  cy(g, .035, .03, M.brass, 0, .06, 0, 32);
-  cy(g, .033, .012, M.black, 0, .082, 0, 32);                             // gauge (red + black needles)
-  mk(new THREE.CircleGeometry(.029, 32), std({ map: labelTex(128, 128, '#f5f5f2', [{ t: 'bar / psi', c: '#222', f: 'bold 18px Arial', y: 42 }, { t: '▲', c: '#c01818', f: 'bold 30px Arial', y: 80 }, { t: '▲', c: '#111', f: 'bold 22px Arial', y: 108 }]), roughness: .4 }), g, [0, .0885, 0], [-PI / 2, 0, 0]);
-  cy(g, .03, .004, M.glass, 0, .09, 0, 32);
-  cy(g, .056, .028, M.brass, 0, -.052, 0, 40);                            // sump ring
-  for (let i = 0; i < 12; i++) { const a = i / 12 * PI * 2; bx(g, .006, .024, .006, M.brassDull, Math.cos(a) * .057, -.052, Math.sin(a) * .057).rotation.y = -a; }
-  cy(g, .0485, .25, M.clear, 0, -.19, 0, 40);                             // clear plastic sump
-  mk(new THREE.SphereGeometry(.0485, 32, 10, 0, 2 * PI, PI / 2, PI / 2), M.clear, g, [0, -.315, 0]);
-  mk(new THREE.CylinderGeometry(.031, .031, .22, 28, 1, true), M.screen, g, [0, -.18, 0]);   // 100 µm SS screen
-  cy(g, .034, .01, M.ss, 0, -.07, 0, 28); cy(g, .034, .01, M.ss, 0, -.29, 0, 28);
-  cy(g, .04, .01, M.silt, 0, -.33, 0, 24);
-  decal(g, labelTex(256, 96, null, [{ t: 'RESIDEO  BRAUKMANN', c: '#1b3e8f', f: 'bold 26px Arial', y: 34 }, { t: 'F76S  100 µm', c: '#1b3e8f', f: 'bold 30px Arial', y: 74 }]), .08, .03, 0, -.13, .0495, 0, 0, true);
-  cy(g, .017, .045, M.brass, 0, -.375, 0, 16);                            // drain ball valve (bayonet)
-  // MV876B1018 actuator on the drain valve
-  rb(g, .07, .15, .12, .01, std({ color: 0xdfe1df, roughness: .45 }), 0, -.47, -.04);
-  rb(g, .062, .05, .006, .004, std({ color: 0x2f5fa6, roughness: .4 }), 0, -.44, .021);
-  cz(g, .016, .006, M.white, 0, -.44, .026, 24);
-  decal(g, labelTex(192, 96, null, [{ t: 'MV876', c: '#fff', f: 'bold 34px Arial', y: 38 }, { t: '24 VAC · 1-16', c: '#dde', f: '20px Arial', y: 76 }]), .05, .025, 0, -.505, .0215, 0, 0, true);
-  cy(g, .013, .04, M.black, 0, -.565, 0, 16);                             // backwash outlet (hose connector)
-  return { g, cab: V(-.035, -.42, 0) };
+  cx(g, .03, .11, pvc, 0, 0, 0, 32);                                      // PVC tee body
+  cy(g, .03, .05, pvc, 0, -.03, 0, 32);
+  cy(g, .064, .03, pvc, 0, -.065, 0, 40);                                 // cover thread ring
+  cy(g, .0635, .21, M.clear, 0, -.185, 0, 40);                            // clear cover (5" dia)
+  mk(new THREE.SphereGeometry(.0635, 32, 10, 0, 2 * PI, PI / 2, PI / 2), M.clear, g, [0, -.29, 0]);
+  mk(new THREE.CylinderGeometry(.016, .016, .14, 24, 1, true), std({ color: 0xe9e4d2, roughness: .8, side: THREE.DoubleSide }), g, [0, -.15, 0]);  // 140 mesh polyester screen
+  cy(g, .02, .008, pvc, 0, -.225, 0, 20);
+  cy(g, .05, .012, M.silt, 0, -.33, 0, 24);
+  decal(g, labelTex(256, 96, null, [{ t: 'RUSCO  SPIN-DOWN', c: '#0d5aa7', f: 'bold 28px Arial', y: 34 }, { t: '1" · 140 MESH', c: '#0d5aa7', f: 'bold 28px Arial', y: 74 }]), .08, .03, 0, -.12, .065, 0, 0, true);
+  cy(g, .013, .05, M.brass, 0, -.375, 0, 16);                            // 1/2" NPT nipple to AFV ball valve
+  // Rusco AFV: brass full-port ball valve + NEMA 4 timer actuator
+  cy(g, .022, .05, M.brass, 0, -.42, 0, 20);
+  rb(g, .11, .13, .09, .01, std({ color: 0x4b5157, roughness: .45 }), 0, -.47, -.07);
+  rb(g, .07, .035, .006, .004, std({ color: 0x18242c, roughness: .3 }), 0, -.44, -.022);
+  decal(g, lcdTex(['AFV 72:00', 'NEXT 14:00'], '#071a2c', '#7fe0a0'), .06, .028, 0, -.44, -.0185);
+  decal(g, labelTex(192, 64, null, [{ t: 'RUSCO AFV', c: '#fff', f: 'bold 30px Arial', y: 34 }]), .06, .02, 0, -.5, -.0245, 0, 0, true);
+  cy(g, .013, .16, M.brass, 0, -.505, 0, 16);                             // flush outlet
+  return { g, cab: V(.05, -.47, -.07) };
 }
 function bigBlue() {   // Pentek 150233 20" Big Blue
   const g = new THREE.Group();
@@ -749,7 +748,7 @@ pex([[.88, .2, .5], [.98, .2, .5], [.98, .62, .5], [.98, .62, PZ], [.98, .955, P
 place(ballValve(), .98, 1.01, PZ, PI / 2);
 pex([[.98, 1.065, PZ], [.98, HY, PZ], [1.07, HY, PZ]]);
 
-/* --- header: P0 → F76S → meter → leak SV ---------------------------- */
+/* --- header: P0 → Rusco spin-down → meter → leak SV ---------------------------- */
 const cablePts = [];   // [worldStart, jboxX, material]
 function addTap(x, opt, jx) {
   const t = tapTee(opt); place(t.g, x, HY, PZ); t.g.updateMatrixWorld(true);
@@ -763,14 +762,13 @@ label('S0 raw', '', [1.22, HY - .14, PZ + .02], 'minor');
 place(union(), 1.345, HY, PZ);
 { const f = f76s(); place(f.g, 1.50, HY, PZ); f.g.updateMatrixWorld(true);
   const c0 = f.g.localToWorld(f.cab.clone());
-  cable([c0, V(c0.x - .02, c0.y + .01, .06), V(1.40, HY - .35, .04)], .0028, M.cableBrown);
-  cablePts.push([V(1.40, HY - .35, .04), 1.15, M.cableBrown]); }
+  cable([c0, V(c0.x + .04, c0.y, .05), V(1.62, HY - .25, .04), V(1.62, 1.85, .03)], .0035, M.black); }   // AFV 8 ft cord → own receptacle (no relay)
 // backwash drain: outlet → short 1" hose → LOCAL visible AIR GAP into funnel → 2" DWV gravity line → 3" receptor (right)
 cable([[1.50, HY - .585, PZ], [1.50, HY - .64, PZ]], .011, M.drainTube);
 mk(new THREE.CylinderGeometry(.05, .022, .08, 32, 1, true), std({ color: 0xf3f3f1, roughness: .45, side: THREE.DoubleSide }), scene, [1.50, HY - .73, PZ]);   // funnel (open top = air gap)
 decal(scene, labelTex(256, 64, '#ffffff', [{ t: 'AIR GAP ≥ 2× dia', c: '#b0281e', f: 'bold 30px Arial', y: 34 }]), .07, .0175, 1.50, HY - .86, PZ + .025);
-label('Resideo F76S1023 + MV876B', '1" backwash filter · 100 µm · 24 VAC auto-backwash', [1.50, HY + .13, PZ], '');
-label('F76S local air gap → 2" line', '~16 gpm × 20 s burst · hose short + unrestricted', [1.62, HY - .80, PZ + .03], 'minor');
+label('Rusco 1-140-F + AFV', '1" spin-down · 140 mesh ≈100 µm · AFV own timer (120 V, no HA control)', [1.50, HY + .13, PZ], '');
+label('Flush air gap → 1" line', '≈0.9 gal × 3.5 s burst per AFV cycle', [1.62, HY - .80, PZ + .03], 'minor');
 place(union(), 1.655, HY, PZ);
 place(ballValve(), 1.80, HY, PZ);
 { const m = waterMeter(); place(m.g, 2.03, HY, PZ); m.g.updateMatrixWorld(true); cablePts.push([m.g.localToWorld(m.cab.clone()), 2.35, M.cableGray]); }
@@ -930,15 +928,15 @@ const DX = 6.85, DZ = .12, RIM = .50;     // receptor centre + flood rim height 
   decal(scene, labelTex(256, 64, '#ffffff', [{ t: '3" STANDPIPE · P-TRAP', c: '#222', f: 'bold 24px Arial', y: 34 }]), .08, .02, DX, .32, DZ + .046);
   bx(scene, .02, .004, DZ, M.galv, DX, .40, DZ / 2); mk(new THREE.TorusGeometry(.047, .003, 8, 24), M.galv, scene, [DX, .40, DZ], [PI / 2, 0, 0]);
   // air-gap clip bracket above the rim: one clip per line, ends held fixed
-  const ends = { f76: [DX - .035, RIM + .11, DZ, .03], aio: [DX + .035, RIM + .07, DZ - .035, .0085], soft: [DX + .04, RIM + .07, DZ, .0085], brine: [DX + .035, RIM + .07, DZ + .035, .0065] };
+  const ends = { f76: [DX - .035, RIM + .11, DZ, .017], aio: [DX + .035, RIM + .07, DZ - .035, .0085], soft: [DX + .04, RIM + .07, DZ, .0085], brine: [DX + .035, RIM + .07, DZ + .035, .0065] };
   bx(scene, .02, .004, DZ + .05, M.galv, DX + .045, RIM + .12, (DZ + .05) / 2);
   bx(scene, .02, .004, .05, M.galv, DX - .035, RIM + .16, .025 + DZ - .05);
   bx(scene, .02, .004, DZ - .02, M.galv, DX - .035, RIM + .16, (DZ - .02) / 2);
   for (const k in ends) { const [x, y, z, r] = ends[k]; mk(new THREE.TorusGeometry(r + .004, .0025, 8, 20), M.galv, scene, [x, k === 'f76' ? RIM + .16 : RIM + .12, z], [PI / 2, 0, 0]); }
   decal(scene, labelTex(256, 64, '#ffffff', [{ t: 'AIR GAPS ≥ 2× dia', c: '#b0281e', f: 'bold 30px Arial', y: 34 }]), .08, .02, DX, RIM + .20, DZ + .05);
-  // F76S: 2" DWV gravity line from the local funnel, 2% (¼"/ft) fall, along the wall
+  // Rusco AFV flush: 1" PVC line from the local funnel, 2% (¼"/ft) fall, along the wall
   const f = ends.f76;
-  cable([[1.50, .735, PZ], [1.50, .72, PZ - .02], [1.53, .717, .07], [DX - .09, f[1] + .005, .07], [f[0], f[1] + .002, .085], [f[0], f[1] + .001, DZ - .01], [f[0], f[1], DZ]], .03, dwv);
+  cable([[1.50, .735, PZ], [1.50, .72, PZ - .02], [1.53, .717, .07], [DX - .09, f[1] + .005, .07], [f[0], f[1] + .002, .085], [f[0], f[1] + .001, DZ - .01], [f[0], f[1], DZ]], .017, dwv);
   for (let x = 1.9; x < DX - .2; x += .55) { const y = .717 - (x - 1.53) / (DX - .09 - 1.53) * (.717 - f[1] - .005); bx(scene, .015, .07, .004, M.galv, x, y, .035); }
   // AIO backwash (pressurised ¾" tube) → own air gap
   const a = ends.aio, so = ends.soft, b = ends.brine;
@@ -948,7 +946,7 @@ const DX = 6.85, DZ = .12, RIM = .50;     // receptor centre + flood rim height 
   // brine overflow: GRAVITY, continuous fall, never teed into a pressurised line → own air gap
   cable([[4.567, .82, .5], [4.62, .81, .52], [4.75, .79, .2], [4.8, .78, .04], [DX - .1, .70, .045], [b[0], .695, .045], [b[0], b[1] + .03, b[2]], [b[0], b[1], b[2]]], .0065, M.clearTube);
   label('3" standpipe + receptor · P-trap', 'existing 3" drain (right) · rim ≥ 18" above trap weir', [DX + .1, RIM + .3, DZ + .05], 'drain');
-  label('Drain lines → right, sloped', 'F76S 2" gravity · AIO · softener · brine overflow (gravity)', [4.9, .82, .06], 'drain');
+  label('Drain lines → right, sloped', 'Rusco flush 1" · AIO · softener · brine overflow (gravity)', [4.9, .82, .06], 'drain');
 }
 
 /* ------------------------------------------------------------------ electrical: outlets, conduit, cables */
@@ -965,7 +963,7 @@ function outlet(x, y, name) {
   label('120 V · ' + name, '', [x, y + .07, .07], 'elec minor');
   return g;
 }
-outlet(2.70, 1.95, 'AIO'); outlet(3.58, 1.95, 'softener'); outlet(5.62, 1.97, 'UV'); outlet(7.98, 1.85, 'controls');
+outlet(1.62, 1.95, 'AFV'); outlet(2.70, 1.95, 'AIO'); outlet(3.58, 1.95, 'softener'); outlet(5.62, 1.97, 'UV'); outlet(7.98, 1.85, 'controls');
 // plug-in transformers for the two Clack heads + EZsalt USB
 for (const [ox, tx] of [[2.70, AIO_X], [3.58, SOFT_X]]) {
   rb(scene, .045, .055, .035, .006, M.black, ox, 1.926, .078);
@@ -1058,10 +1056,6 @@ for (const [x, z, n] of [[2.45, .66, 'Shelly Flood · train'], [4.62, .26, 'Shel
   decal(E, labelTex(128, 64, null, [{ t: 'Shelly', c: '#fff', f: 'bold 32px Arial', y: 32 }]), .03, .015, -.025, .18, .0445, 0, 0, true);
   for (let i = 0; i < 18; i++) dev(.0058, .05, .04, i % 6 === 5 ? std({ color: 0x2a62c9, roughness: .5 }) : std({ color: 0x9da2a6, roughness: .5 }), .008 + i * .0062, .175, .001);
   for (let i = 0; i < 4; i++) cx(E, .0022, .012, M.black, .013 + i * .02, .2, .062, 8);
-  // F76S backwash: Shelly 1 Gen4 #2 (switches MV876B 24 VAC) on rail 1
-  dev(.042, .042, .03, M.black, .145, .175, .006);
-  decal(E, labelTex(128, 64, null, [{ t: 'Shelly', c: '#fff', f: 'bold 32px Arial', y: 32 }]), .03, .015, .145, .18, .0445, 0, 0, true);
-  decal(E, labelTex(128, 48, '#f2c230', [{ t: 'B/WASH', c: '#111', f: 'bold 28px Arial', y: 26 }]), .026, .01, .145, .145, .0445);
   // DIN rail 2: ESP32 DevKitC + 2x ADS1115 + NOYITO + divider board on DIN carriers
   dev(.11, .068, .008, std({ color: 0x5d6166, roughness: .6 }), -.12, .06);
   bx(E, .055, .028, .0016, M.pcbBlack, -.12, .06, .0235); bx(E, .018, .016, .003, M.ss, -.138, .06, .026); bx(E, .008, .007, .003, M.ss, -.09, .06, .026);
@@ -1099,9 +1093,6 @@ for (const [x, z, n] of [[2.45, .66, 'Shelly Flood · train'], [4.62, .26, 'Shel
   decal(E, labelTex(128, 96, null, [{ t: '24 VAC', c: '#ddd', f: 'bold 28px Arial', y: 40 }, { t: '1 A', c: '#aaa', f: '22px Arial', y: 72 }]), .034, .026, .005, -.2, .0915, 0, 0, true);
   rb(E, .036, .05, .03, .005, M.black, .095, -.2, .056);
   decal(E, labelTex(128, 64, null, [{ t: '12V 1A', c: '#bbb', f: 'bold 26px Arial', y: 32 }]), .024, .012, .095, -.2, .0715, 0, 0, true);
-  // Robertshaw 620-202 plug-in 24 VAC 20 VA (MV876B only) on the 4th outlet
-  rb(E, .04, .056, .044, .005, std({ color: 0x2d3033, roughness: .5 }), .14, -.2, .063);
-  decal(E, labelTex(128, 96, null, [{ t: '620-202', c: '#ddd', f: 'bold 26px Arial', y: 38 }, { t: '24VAC 20VA', c: '#aaa', f: '20px Arial', y: 72 }]), .03, .022, .14, -.2, .0855, 0, 0, true);
   // ---- simplified, colour-coded wiring routes (identifiable paths, NOT a verified wiring diagram)
   const WZ = .079, w = (pts, mat, r = .0013) => cable(pts.map(q => V(EX + q[0], EY + q[1], q[2] ?? WZ)), r, mat);
   const TE = [-.12, H / 2 - .01, .06];          // field-wiring entry from the PVC conduit (top)
@@ -1122,9 +1113,6 @@ for (const [x, z, n] of [[2.45, .66, 'Shelly Flood · train'], [4.62, .26, 'Shel
   w([[-.056, .215, .075], [-.06, .232], [-.11, H / 2 - .01, .06]], M.wireUV);
   w([[-.105, H / 2 - .01, .06], [-.09, .242], [-.005, .242], [-.005, .118], [-.01, .07, .026]], M.cableBlue, .0011);
   w([[-.005, .118], [-.1, .09], [-.12, .075, .028]], M.cableBlue, .0011);
-  // 24 VAC (MV876B): 620-202 → Shelly #2 contact → top entry → conduit → F76S
-  w([[.14, -.172, .07], [.168, -.15], [.172, .118], [.155, .15, .045]], M.cableBrown, .0016);
-  w([[.135, .198, .046], [.12, .236], [-.1, .243], TE], M.cableBrown, .0016);
   // 24 VAC: transformer → OpenSprinkler; zone wires → zone terminal strip → zone gland
   w([[.005, -.165, .07], [.005, -.15], [-.06, -.14], [-.07, -.12, .045]], std({ color: 0x8a5a2b, roughness: .5 }), .0016);
   const zc = [0xd33a2c, 0x2f6fd0, 0x2b9a48, 0xe0c22a, 0xf0f0f0, 0x6a3fa0, 0xe07a1e, 0x222222];
@@ -1351,19 +1339,19 @@ const UNITS = [];
   // [id, data, centre xyz, size xyz]
   const D = [
     ['tank', S({ name: 'Existing pressure tank', model: 'Existing well tank + tank tee (reused)', what: 'Stores pressurised water from the well pump so the pump does not start for every tap opening.', flow: 'First in line: right after the well pump, before tap P0.', vendor: 'Existing — reused', price: '$0' }), [.40, .62, .5], [.44, 1.24, .44]],
-    ['P0', TAP('P0', 'Start of the train: after the pressure tank, before the Resideo F76S backwash filter.'), [1.10, HY + .1, PZ], [.07, .32, .1]],
-    ['S0', SMP('S0 (raw)', 'After P0, before the Resideo F76S backwash filter.'), [1.22, HY - .08, PZ], [.06, .16, .08]],
-    ['f76s', S({ name: 'Self-cleaning sediment filter', model: 'Resideo Braukmann F76S1023 · 1" · 100 µm stainless screen · brass head, clear sump, dual-needle gauge', what: 'Catches sand, grit and iron flakes before anything else. It cleans itself by reverse-rinsing (backwash) for ~20 s to the drain; water keeps flowing meanwhile. Cv 18 → ≈0.2 psi drop at 8 gpm. Needs ≥ 22 psi; max 232 psi / 104 °F. Lead-free (NSF 372) to be confirmed with Resideo before purchase.', flow: 'After tap P0, before the water meter. Horizontal pipe, sump down.', vendor: 'SupplyHouse', price: '$588.86 (spare AF11DS-1A screen $165.24, optional)' }), [1.50, HY - .14, PZ], [.2, .5, .14]],
-    ['mv876', S({ name: 'Automatic backwash actuator', model: 'Resideo Braukmann MV876B1018 · 24 VAC 4 VA · timer 4 min–3 months', what: 'Opens the filter drain valve on a timer to backwash. It also backwashes once every time its power comes on, so Home Assistant triggers a rinse by switching its 24 VAC off/on through a Shelly. No status output; HA sees the P0 pressure dip.', flow: 'On the F76S drain valve; 24 VAC from the controls enclosure (620-202 → Shelly #2).', vendor: 'SupplyHouse', price: '$345.39' }), [1.50, HY - .47, PZ - .04], [.09, .17, .14]],
-    ['f76sDrain', S({ name: 'F76S backwash local air gap', model: 'Short 1" hose → visible air gap → funnel/reducer into 2" DWV', what: 'The F76S needs a short, wide, unrestricted drain. Its run to the 3" drain is long (≈ 17 ft), so per the Resideo manual it discharges here through a local air gap into a larger 2" gravity line instead of a long small hose.', flow: 'Directly below the MV876B outlet; then the 2" line runs right to the 3" receptor.', vendor: 'Plumber (fittings TBD)', price: 'TBD' }), [1.50, HY - .72, PZ], [.13, .16, .12]],
-    ['f76sLine', S({ name: 'F76S 2" gravity drain line', model: '2" PVC/ABS DWV, ¼"/ft (2%) fall, clipped to the wall', what: 'Carries the ~16 gpm, 20 s F76S backwash burst by gravity from its local air gap to the 3" receptor, where it ends in its own air gap (≥ 4" above the rim).', flow: 'Along the wall from the F76S (left) to the existing 3" drain (right).', vendor: 'Plumber (not in BOM)', price: 'TBD' }), [2.6, .68, .07], [2.4, .1, .08]],
+    ['P0', TAP('P0', 'Start of the train: after the pressure tank, before the Rusco spin-down filter.'), [1.10, HY + .1, PZ], [.07, .32, .1]],
+    ['S0', SMP('S0 (raw)', 'After P0, before the Rusco spin-down filter.'), [1.22, HY - .08, PZ], [.06, .16, .08]],
+    ['f76s', S({ name: 'Spin-down sediment filter', model: 'Rusco 1-140-F · 1" PVC socket · 140 mesh (≈104 µm) polyester screen · clear cover', what: 'Catches sand, grit and iron flakes before anything else; sediment spins down into the clear cover and is flushed out the bottom by the AFV. 1–25 gpm, 150 psi max, cold water only (≤ 75 °F). Spare screen FS1-140 on the shelf.', flow: 'After tap P0, before the water meter. Horizontal pipe, cover down; PVC male adapters into LF brass unions.', vendor: 'Agri Sales (SupplyHouse backordered)', price: '$49.75 (spare FS1-140 $12.97)' }), [1.50, HY - .14, PZ], [.2, .45, .14]],
+    ['mv876', S({ name: 'Automatic flush valve', model: 'Rusco AFV · 120 V 2.5 A · timer 1 min–14 days · 1/2" full-port brass ball valve · NEMA 4', what: 'Opens the filter flush port for ~3.5 s on its own timer (≈0.9 gal per cycle). Plugged into its own receptacle — no Shelly or Home Assistant control needed; HA can see each flush as a short P0 dip.', flow: 'On the spin-down 1/2" flush port; cord to the AFV receptacle above.', vendor: 'SupplyHouse', price: '$384.62' }), [1.50, HY - .47, PZ - .04], [.12, .15, .12]],
+    ['f76sDrain', S({ name: 'Spin-down flush air gap', model: 'AFV outlet → visible air gap → funnel into 1" PVC', what: 'Each AFV cycle dumps a short ≈0.9 gal burst; it drops through a visible air gap into the funnel, then a 1" line carries it to the 3" receptor.', flow: 'Directly below the AFV outlet; then the 1" line runs right to the 3" receptor.', vendor: 'Plumber (fittings TBD)', price: 'TBD' }), [1.50, HY - .72, PZ], [.13, .16, .12]],
+    ['f76sLine', S({ name: 'Spin-down 1" flush drain line', model: '1" Sch 40 PVC, sloped toward the receptor, clipped to the wall', what: 'Carries the short AFV flush bursts from the local air gap to the 3" receptor, where it ends in its own air gap (≥ 2× dia above the rim).', flow: 'Along the wall from the spin-down (left) to the existing 3" drain (right).', vendor: 'Plumber (local pickup)', price: 'TBD' }), [2.6, .68, .07], [2.4, .1, .08]],
     ['drain3', S({ name: '3" standpipe + receptor + P-trap', model: '3" DWV standpipe with 6"×3" receptor funnel, P-trap, trap arm to the EXISTING 3" drain', what: 'One common, code-trapped receptor that every water-treatment drain empties into through its own air gap. The rim is ≥ 18" above the trap weir; vent per local code.', flow: 'Right side of the equipment space, on the existing 3" drain.', vendor: 'Plumber (fittings TBD on site)', price: 'TBD' }), [DX + .03, (RIM + .05) / 2, DZ], [.22, RIM + .05, .2]],
     ['airGaps', S({ name: 'Air-gap clip bracket', model: 'Galvanised strap + one clip per drain line, fixed above the receptor rim', what: 'Holds each drain line so its open end stays at least 2× its diameter above the rim: you can always see the gap, and dirty water can never be siphoned back into the equipment.', flow: 'Above the 3" receptor.', vendor: 'Plumber (not in BOM)', price: 'TBD' }), [DX, RIM + .13, DZ], [.14, .1, .16]],
     ['aioDrain', S({ name: 'Iron filter backwash line', model: 'Atmos-AIO / Clack WS1 drain line (¾", pressurised)', what: 'Carries the ~6.5 gpm iron-filter backwash. A pressurised line on its own; it ends in its own air gap at the receptor. Home Assistant schedules it for 2 AM.', flow: 'From the AIO head, down and right along the wall.', vendor: 'Plumber (tubing TBD)', price: 'TBD' }), [5.0, .79, .03], [3.6, .05, .04]],
     ['softDrain', S({ name: 'Softener regeneration drain line', model: 'Clack WS1 softener drain line (pressurised)', what: 'Carries the softener regeneration water. Its own line and its own air gap; never shares a pipe with the brine overflow. Scheduled for 3 AM.', flow: 'From the softener head, down and right along the wall.', vendor: 'Plumber (tubing TBD)', price: 'TBD' }), [5.4, .76, .02], [2.8, .05, .03]],
     ['brineOver', S({ name: 'Brine tank overflow (gravity)', model: '½" overflow tube from the brine tank elbow', what: 'Safety overflow only. It works by gravity, so it must fall continuously the whole way and must NEVER be teed into a pressurised drain line. It ends in its own air gap at the receptor.', flow: 'From the brine tank overflow elbow, down to the wall, then right to the receptor.', vendor: 'Plumber (tubing TBD)', price: 'TBD' }), [4.68, .8, .3], [.25, .1, .45]],
-    ['isoMeter', ISO('Isolation valve (meter)', 'After the F76S filter, before the water meter.'), [1.80, HY + .02, PZ], [.08, .14, .12]],
-    ['meter', S({ name: 'Pulse water meter', model: 'DAE MJP-100P · 1" · 1 gallon per pulse', what: 'Counts every gallon used and reports it to the ESP32. Also proves the shut-off valves really closed (no flow while closed).', flow: 'After the F76S filter, before the leak shut-off valve.', vendor: 'DAE Control', price: '$119.00' }), [2.03, HY, PZ], [.17, .16, .13]],
+    ['isoMeter', ISO('Isolation valve (meter)', 'After the Rusco spin-down filter, before the water meter.'), [1.80, HY + .02, PZ], [.08, .14, .12]],
+    ['meter', S({ name: 'Pulse water meter', model: 'DAE MJP-100P · 1" · 1 gallon per pulse', what: 'Counts every gallon used and reports it to the ESP32. Also proves the shut-off valves really closed (no flow while closed).', flow: 'After the Rusco spin-down filter, before the leak shut-off valve.', vendor: 'DAE Control', price: '$119.00' }), [2.03, HY, PZ], [.17, .16, .13]],
     ['leakValve', S({ name: 'Leak shut-off valve', ...NS, what: 'Automatic main shut-off. A spring holds it closed unless powered, so it shuts the water off if a leak sensor trips or power is lost.', flow: 'After the water meter, before the Atmos-AIO iron filter.' }), [2.33, HY + .05, PZ], [.13, .22, .11]],
     ['isoLeak', ISO('Isolation valve (leak valve)', 'After the leak shut-off valve, before the iron filter.'), [2.48, HY + .02, PZ], [.08, .14, .12]],
     ['aio', S({ name: 'Iron / sulphur filter', model: 'Aquatell Atmos-AIO · Clack WS1 head · 10×54 tank · Katalox Light', what: 'Injects air to oxidise iron and sulphur (rotten-egg smell) and traps the particles in the media bed, then backwashes itself to the drain.', flow: 'After the leak shut-off valve, before tap P1 and the softener.', vendor: 'Aquatell', price: '$1,198.99' }), [2.95, .86, .55], [.3, 1.72, .32]],
@@ -1405,10 +1393,8 @@ const UNITS = [];
     ['opensprinkler', S({ name: 'OpenSprinkler 3.x irrigation controller', model: 'OpenSprinkler 3.x · ~6 × 4 × 1.5 in own case · 24 VAC · 8 zones base, expandable to 72', what: 'Wi-Fi sprinkler controller that runs the landscaper-installed Rain Bird zone valves and integrates with Home Assistant. Not purchased — space reserved only.', flow: 'Controls enclosure backplate, below the ESP32 rail; zone wires go to the zone terminal strip.', vendor: 'OpenSprinkler (not purchased)', price: '≈ $150–250 (estimate)' }), [7.405, 1.560, 0.06], [0.155, 0.105, 0.08]],
     ['ospExp', S({ name: 'Reserved: OpenSprinkler expansion', model: 'Space for 1–2 OpenSprinkler expansion boards (16 zones each)', what: 'Empty, labelled backplate space so up to 32 more irrigation zones can be added later without a new box.', flow: 'Controls enclosure backplate, right of the OpenSprinkler.', vendor: 'OpenSprinkler (not purchased)', price: 'Not purchased' }), [7.575, 1.560, 0.03], [0.15, 0.1, 0.05]],
     ['zoneTerm', S({ name: 'Irrigation zone terminal strip', model: 'DIN terminal blocks for zone wires + common (green = common)', what: 'Joins the OpenSprinkler zone outputs to the multi-conductor irrigation cable, so the controller can be swapped without re-pulling field wire.', flow: 'Controls enclosure, right edge of the backplate; down to the zone-cable gland.', vendor: 'AutomationDirect', price: 'Price not verified' }), [7.676, 1.566, 0.06], [0.04, 0.08, 0.1]],
-    ['outletStrip', S({ name: 'Outlet strip (inside enclosure)', model: '4-outlet 120 VAC strip on the backplate', what: 'Powers the plug-in adapters inside the box: the OpenSprinkler 24 VAC transformer, the HA Green 12 V adapter and the 620-202 24 VAC supply for the F76S backwash actuator.', flow: 'Controls enclosure, bottom row; fed from the 120 VAC gland.', vendor: 'TBD', price: 'Price not verified' }), [7.570, 1.440, 0.04], [0.2, 0.045, 0.07]],
+    ['outletStrip', S({ name: 'Outlet strip (inside enclosure)', model: '4-outlet 120 VAC strip on the backplate', what: 'Powers the plug-in adapters inside the box: the OpenSprinkler 24 VAC transformer, and the HA Green 12 V adapter.', flow: 'Controls enclosure, bottom row; fed from the 120 VAC gland.', vendor: 'TBD', price: 'Price not verified' }), [7.570, 1.440, 0.04], [0.2, 0.045, 0.07]],
     ['xfmr24', S({ name: '24 VAC plug-in transformer', model: '24 VAC ~1 A wall transformer (OpenSprinkler power)', what: 'Steps 120 VAC down to the 24 VAC the OpenSprinkler and Rain Bird solenoid valves need.', flow: 'Plugged into the outlet strip; low-voltage lead to the OpenSprinkler.', vendor: 'Usually bundled with OpenSprinkler', price: 'Typically included' }), [7.505, 1.440, 0.07], [0.055, 0.07, 0.06]],
-    ['shellyBw', S({ name: 'Backwash trigger (Shelly #2)', model: 'Shelly 1 Gen4 UL (dry-contact relay)', what: 'Normally ON. Its contact passes the 620-202’s 24 VAC to the MV876B; Home Assistant turns it off for 5 s and back on to start one filter backwash.', flow: 'Controls box, top DIN rail, right end; 24 VAC out the top conduit to the F76S.', vendor: 'Shelly US', price: '$27.99' }), [7.645, 1.815, 0.1], [0.045, 0.1, 0.2]],
-    ['bwXfmr', S({ name: '24 VAC supply (backwash actuator)', model: 'Robertshaw 620-202 plug-in 120 → 24 VAC, 20 VA', what: 'Dedicated 24 VAC for the MV876B (needs only 4 VA). Kept separate from the OpenSprinkler transformer so switching the backwash never interrupts irrigation and valve inrush stays isolated.', flow: 'Plugged into the 4th outlet on the enclosure strip; feeds the backwash Shelly.', vendor: 'SupplyHouse', price: '$40.49' }), [7.640, 1.440, 0.07], [0.045, 0.06, 0.05]],
     ['zoneGland', S({ name: 'Zone-wire cable gland', model: 'Large NEMA 4X cable gland (bottom of enclosure)', what: 'Seals around the irrigation zone-wire bundle where it leaves the box, keeping the enclosure watertight.', flow: 'Bottom of the controls enclosure, right side.', vendor: 'AutomationDirect', price: 'Price not verified' }), [7.650, 1.373, 0.08], [0.04, 0.04, 0.05]],
     ['zoneCable', S({ name: 'Irrigation zone cable (stub)', model: 'Multi-conductor direct-burial sprinkler cable (e.g. 18 AWG, 7–13 conductor)', what: 'Carries each zone wire plus common out to the landscaper-installed Rain Bird valves.', flow: 'From the zone gland, along the wall to a sleeve through the outside wall.', vendor: 'TBD', price: 'Price not verified' }), [7.880, 1.216, .06], [.5, .2, .1]],
     ['ro', S({ name: 'Kitchen reverse-osmosis system', model: 'Delta Clarifi DWQ1001012 tankless RO, 600 GPD + DWQ300300 remineralizer + DWQ4001002 air-gap faucet', what: 'Under-sink drinking-water filter. NSF/ANSI 58/53/401 certified (IAPMO) for arsenic (V), nitrate, chromium, lead, PFAS and more. Test the RO output once after install.', flow: 'Under the kitchen sink, fed from the treated house supply (after everything on this wall).', vendor: 'Ferguson Home', price: '$799.00 + $69.90 + $159.90' }), [9.20, .344, .22], [.44, .46, .16]],
