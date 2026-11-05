@@ -67,7 +67,7 @@
 <div id="inspect" role="dialog" aria-label="Equipment details"><button class="x" aria-label="Close">×</button><div class="body"></div></div>
 <div id="ui">
   <div class="t">Well water treatment closet — 3D</div>
-  <div class="s">rev closet-v3 · 72″ W × 40″ D × 106″ H · door L/front · PT back-left · 3″ drain BACK-RIGHT · main bypass option A · no RO in closet</div>
+  <div class="s">rev closet-v4 · 72″ W × 40″ D × 106″ H · door L/front · PT back-left · 3″ drain BACK-RIGHT · main bypass option A · no RO in closet</div>
   <div>
     <button id="btnLabels" class="on" title="Toggle labels (L)">Labels (L)</button>
     <button id="btnWalls" class="on" title="Ghost walls">Ghost walls</button>
@@ -720,20 +720,20 @@ let ghostWalls = true;
 
   const wallMat = std({ color: 0xd8d3c8, roughness: .92, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide });
   const wt = 0.05;
-  // back, left, right
-  mk(new THREE.BoxGeometry(W, H, wt), wallMat, wallsGroup, [W / 2, H / 2, DEPTH + wt / 2]);
+  // back (z≈0), left, right
+  mk(new THREE.BoxGeometry(W, H, wt), wallMat, wallsGroup, [W / 2, H / 2, -wt / 2]);
   mk(new THREE.BoxGeometry(wt, H, DEPTH), wallMat, wallsGroup, [-wt / 2, H / 2, DEPTH / 2]);
   mk(new THREE.BoxGeometry(wt, H, DEPTH), wallMat, wallsGroup, [W + wt / 2, H / 2, DEPTH / 2]);
-  // front with door opening (~30" from left)
+  // front (z=DEPTH) with door opening (~30" from left)
   const doorW = 30 * IN;
-  mk(new THREE.BoxGeometry(W - doorW, H, wt), wallMat, wallsGroup, [doorW + (W - doorW) / 2, H / 2, -wt / 2]);
-  // door swing arc
+  mk(new THREE.BoxGeometry(W - doorW, H, wt), wallMat, wallsGroup, [doorW + (W - doorW) / 2, H / 2, DEPTH + wt / 2]);
+  // door swing arc on floor at front-left
   const arc = new THREE.Mesh(
-    new THREE.RingGeometry(0.04, doorW, 28, 1, 0, PI / 2),
+    new THREE.RingGeometry(0.04, doorW, 28, 1, -PI / 2, PI / 2),
     std({ color: 0xc0181e, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false })
   );
-  arc.rotation.x = -PI / 2; arc.position.set(0, 0.012, 0); scene.add(arc);
-  label('DOOR', '~30″ opening · keep swing clear', [doorW / 2, 0.18, 0.12], 'warn');
+  arc.rotation.x = -PI / 2; arc.position.set(0, 0.012, DEPTH); scene.add(arc);
+  label('DOOR', '~30″ opening · keep swing clear', [doorW / 2, 0.18, DEPTH - 0.12], 'warn');
 
   // ceiling (hideable for top view)
   const ceil = new THREE.Group(); ceil.name = 'ceiling'; scene.add(ceil);
@@ -759,13 +759,15 @@ function setGhost(on) {
 window.setGhost = setGhost;
 
 /* ================================================================== EQUIPMENT LAYOUT
-   Origin: front-left floor corner; +X right; +Y up; +Z back (toward back wall).
+   Origin: BACK-left floor corner; +X right; +Y up; +Z toward FRONT/door.
+   three.js Front camera sits at +Z (doorway) looking down −Z at the back wall → screen-left = world −X? NO:
+   looking down −Z ⇒ camera +X = world +X ⇒ screen-right = +X. Tank (small X) = screen-LEFT; drain (large X) = screen-RIGHT.
 */
-const PT_X = 11 * IN, PT_Z = DEPTH - 11 * IN;
-const AIO_X = 28 * IN, AIO_Z = DEPTH - 8 * IN;
-const SOFT_X = 40 * IN, SOFT_Z = DEPTH - 9 * IN, SOFT_R = .1524, SOFT_DY = .152;
-const BRINE_X = 52 * IN, BRINE_Z = DEPTH - 18 * IN;
-const DRAIN_X = W - 2.0 * IN, DRAIN_Z = DEPTH - 4.5 * IN, DRAIN_RIM = 18 * IN;  // BACK-RIGHT; rim ~18" AFF so gravity drains fall
+const PT_X = 11 * IN, PT_Z = 11 * IN;                 // BACK-LEFT
+const AIO_X = 28 * IN, AIO_Z = 8 * IN;
+const SOFT_X = 40 * IN, SOFT_Z = 9 * IN, SOFT_R = .1524, SOFT_DY = .152;
+const BRINE_X = 52 * IN, BRINE_Z = 18 * IN;            // forward of softener (toward door)
+const DRAIN_X = W - 2.0 * IN, DRAIN_Z = 4.5 * IN, DRAIN_RIM = 18 * IN;  // BACK-RIGHT
 
 /* --- Pressure tank (existing) back-left --- */
 {
@@ -809,40 +811,40 @@ addCylObs('softener', SOFT_X, 0, SOFT_Z, 6.2 * IN, 0, 1.60);
   addCylObs('brine', BRINE_X, 0, BRINE_Z, 9.2 * IN, 0, 0.90);
 }
 
-/* ================================================================== RIGHT-WALL TRAIN (flow along +Z, front → back)
+/* ================================================================== RIGHT-WALL TRAIN (flow along +Z toward front)
    Components oriented with ry=PI/2 so local +X → world +Z.
 */
 const RY = PI / 2;
 function placeZ(g, x, y, z) { return place(g, x, y, z, 0, RY); }
 
-// Z stations along right wall (inches from front)
+// Z stations along right wall (inches from BACK; +Z toward door)
 const Z = {
-  // +Z = back. Flow along right wall: BACK inlet → spin/AFV (by drain) → meter → leak → AIO/soft → BB → lim → UV → house (toward front).
-  stub: DEPTH - 4 * IN,
-  p0: DEPTH - 6 * IN,
-  spin: DEPTH - 8.5 * IN,
-  meter: 29 * IN,
-  leak: 27 * IN,
-  ret: 25 * IN,
-  p2: 24 * IN,
-  bb: 21 * IN,
-  p3: 19 * IN,
-  lim: 17.5 * IN,
-  uvIn: 16 * IN,
-  uv: 14 * IN,
-  uvSv: 12 * IN,
-  p4: 10.5 * IN,
-  house: 8 * IN,
+  // +Z toward front/door. Stations measured from BACK wall. Flow: stub(back) → … → house(front).
+  stub: 4 * IN,
+  p0: 6 * IN,
+  spin: 8.5 * IN,
+  meter: 11 * IN,
+  leak: 13 * IN,
+  ret: 15 * IN,
+  p2: 16 * IN,
+  bb: 19 * IN,
+  p3: 21 * IN,
+  lim: 22.5 * IN,
+  uvIn: 24 * IN,
+  uv: 26 * IN,
+  uvSv: 28 * IN,
+  p4: 29.5 * IN,
+  house: 32 * IN,
 };
 
 /* Inlet from PT → stubs (routes AROUND equipment, never through) */
-// PT tee → aisle west of AIO → FORWARD past tanks → across front of closet → along right wall BACK to stub → up
+// PT tee → aisle west of AIO → toward FRONT past tanks → across near door → along right wall BACK to stub → up
 {
-  const aisleX = 18 * IN;          // west of AIO (AIO at 28")
-  const crossZ = 10 * IN;          // forward of brine (brine ~DEPTH-18") and door-clear of SW swing
+  const aisleX = 18 * IN;                 // west of AIO (AIO at 28")
+  const crossZ = DEPTH - 10 * IN;         // near front, clear of brine (brine at 18" from back)
   pex([
-    [PT_X + .22, .25, PT_Z - .12],
-    [aisleX, .25, PT_Z - .12],
+    [PT_X + .22, .25, PT_Z + .12],
+    [aisleX, .25, PT_Z + .12],
     [aisleX, .25, crossZ],
     [trainX, .25, crossZ],
     [trainX, .25, Z.stub],
@@ -886,9 +888,9 @@ pex([[trainX, trainY, Z.meter + .12], [trainX, trainY, Z.leak - .08]], { clips: 
 
 /* --- Jump to AIO / softener along BACK wall at trainY, outside tank radii --- */
 // After leak: go back along right wall a bit, then left along back wall in the 3" gap? 
-// Better: drop slightly into aisle (trainX - 0.25), run at z = DEPTH - 16*IN (forward of tanks), to AIO/soft fronts, then up to heads.
+// Aisle header at runZ=16" from back (forward of tank shells), then up to Clack heads.
 {
-  const runZ = DEPTH - 16 * IN;   // forward of AIO/soft (AIO z=DEPTH-8, r=5 → front DEPTH-13; 16" from back = DEPTH-16 clears by 3")
+  const runZ = 16 * IN;   // forward of AIO/soft (toward door); clears tank shells by ~3"
   const headY = 1.50;         // near Clack bypass height
   // right wall → aisle runZ → to AIO
   pex([
@@ -897,22 +899,22 @@ pex([[trainX, trainY, Z.meter + .12], [trainX, trainY, Z.leak - .08]], { clips: 
     [trainX - .20, trainY, runZ],
     [AIO_X + .05, trainY, runZ],
     [AIO_X + .05, headY, runZ],
-    [AIO_X + .05, headY, AIO_Z - .22],
+    [AIO_X + .05, headY, AIO_Z + .22],
   ], { clips: false });
-  place(union(), AIO_X + .05, headY, AIO_Z - .20, 0, 0);
+  place(union(), AIO_X + .05, headY, AIO_Z + .20, 0, 0);
   // through AIO bypass (visual short) to softener side
   pex([
-    [AIO_X - .05, headY, AIO_Z - .22],
+    [AIO_X - .05, headY, AIO_Z + .22],
     [AIO_X - .05, headY, runZ],
     [SOFT_X - .05, headY - SOFT_DY, runZ],
-    [SOFT_X - .05, headY - SOFT_DY, SOFT_Z - .22],
+    [SOFT_X - .05, headY - SOFT_DY, SOFT_Z + .22],
   ], { clips: false, start: false });
-  place(union(), AIO_X - .05, headY, AIO_Z - .20, 0, 0);
-  place(union(), SOFT_X - .05, headY - SOFT_DY, SOFT_Z - .20, 0, 0);
-  place(union(), SOFT_X + .05, headY - SOFT_DY, SOFT_Z - .20, 0, 0);
+  place(union(), AIO_X - .05, headY, AIO_Z + .20, 0, 0);
+  place(union(), SOFT_X - .05, headY - SOFT_DY, SOFT_Z + .20, 0, 0);
+  place(union(), SOFT_X + .05, headY - SOFT_DY, SOFT_Z + .20, 0, 0);
   // softener out → back to right wall at ret
   pex([
-    [SOFT_X + .05, headY - SOFT_DY, SOFT_Z - .22],
+    [SOFT_X + .05, headY - SOFT_DY, SOFT_Z + .22],
     [SOFT_X + .05, headY - SOFT_DY, runZ],
     [trainX - .20, trainY, runZ],
     [trainX, trainY, runZ],
@@ -929,9 +931,9 @@ pex([[trainX, trainY, Z.meter + .12], [trainX, trainY, Z.leak - .08]], { clips: 
 
 /* brine line softener → brine (above aisle, not through tanks) */
 cable([
-  [SOFT_X + .11, 1.44 - SOFT_DY, SOFT_Z - .05],
-  [SOFT_X + .15, 1.35, SOFT_Z - .15],
-  [BRINE_X - .15, 1.10, BRINE_Z - .05],
+  [SOFT_X + .11, 1.44 - SOFT_DY, SOFT_Z + .05],
+  [SOFT_X + .15, 1.35, SOFT_Z + .12],
+  [BRINE_X - .15, 1.10, BRINE_Z + .02],
   [BRINE_X - .24, .94, BRINE_Z],
 ], .0048, M.black);
 
@@ -1084,11 +1086,11 @@ label('TO HOUSE · treated', 'after P4', [trainX - .2, trainY + .1, Z.house]);
 
   // AIO backwash (pressurised Clack): south into aisle (clears soft), east past brine, continuously DOWN to tip
   {
-    const aisleZ = DEPTH - 22 * IN; // forward of AIO/soft shells
+    const aisleZ = 22 * IN; // forward of AIO/soft shells (toward door)
     const eastX = Math.min(BRINE_X + 11 * IN, DX - .14); // east of brine
     // Drop below Big Blue housing (obs y0 ≈ trainY-0.68) before swinging +Z toward receptor
     const pts = [
-      [AIO_X + .05, 1.47, AIO_Z - .20],
+      [AIO_X + .05, 1.47, AIO_Z + .20],
       [AIO_X + .05, 1.35, aisleZ],
       [eastX, 1.15, aisleZ],
       [eastX, 0.70, aisleZ],
@@ -1105,10 +1107,10 @@ label('TO HOUSE · treated', 'after P4', [trainX - .2, trainY + .1, Z.house]);
   // Softener regen (pressurised): south into aisle, east of brine, continuously DOWN to tip
   {
     const softOutY = 1.47 - SOFT_DY;
-    const aisleZ = DEPTH - 22 * IN;
+    const aisleZ = 22 * IN;
     const eastX = Math.min(BRINE_X + 11 * IN, DX - .14);
     const pts = [
-      [SOFT_X + .05, softOutY, SOFT_Z - .20],
+      [SOFT_X + .05, softOutY, SOFT_Z + .20],
       [SOFT_X + .05, softOutY - .08, aisleZ],
       [eastX, softOutY - .18, aisleZ],
       [eastX, 0.70, aisleZ],
@@ -1122,14 +1124,15 @@ label('TO HOUSE · treated', 'after P4', [trainX - .2, trainY + .1, Z.house]);
     trackGravity(pts, .0085, 'soft_regen');
   }
 
-  // Brine overflow: GRAVITY ONLY — continuous fall, never rises
+  // Brine overflow: GRAVITY ONLY — forward into aisle first (clears Big Blue at Z.bb), east, then back to tip
   {
     const pts = [
       [BRINE_X + .26, .70, BRINE_Z],
-      [BRINE_X + .28, .62, BRINE_Z + .06],
-      [BRINE_X + .22, .55, (BRINE_Z + DZ) / 2],
-      [DX - .04, 0.50, DZ - .02],
-      [br[0], br[1] + .006, br[2]],
+      [BRINE_X + .28, .58, BRINE_Z + .16],
+      [DX - .12, 0.52, BRINE_Z + .18],
+      [DX - .08, 0.50, (BRINE_Z + DZ) / 2],
+      [DX - .06, 0.495, DZ + .02],
+      [br[0], br[1] + .004, br[2]],
       [br[0], br[1], br[2]],
     ];
     cable(pts, .0065, M.clearTube);
@@ -1142,35 +1145,58 @@ label('TO HOUSE · treated', 'after P4', [trainX - .2, trainY + .1, Z.house]);
 /* Track drain cables as segments approximately for intersection (sample key spans) */
 /* drain trackSeg samples omitted — cable() paths checked visually; segs recorded via wrapped seg for pex */
 
-/* ================================================================== NEMA + HA (back-right high) + outlets */
+/* ================================================================== NEMA + HA (back-right high) + outlets
+   Back plate FLAT on back wall (z≈0). Body extends +Z into the room. Door hinged on left, swings into aisle.
+*/
 {
-  const EX = W - 18 * IN, EY = 86 * IN, EZ = DEPTH - 5 * IN;  // clear of right-wall house riser
-  const E = new THREE.Group(); E.position.set(EX, EY, EZ); scene.add(E);
-  // face toward aisle (-Z)
   const ew = 20 * IN, eh = 16 * IN, ed = 8 * IN;
+  const EX = W - 18 * IN, EY = 86 * IN, EZ = 0.4 * IN;  // back plate just off back wall; clear of right-wall train
+  const E = new THREE.Group(); E.position.set(EX, EY, EZ); scene.add(E);
+  E.userData.enclosure = {
+    name: 'nema',
+    wall: 'back',          // mounted on back wall (normal +Z into room)
+    doorOpenNormal: [0, 0, 1], // open door faces into room (+Z)
+    hinge: 'left',
+  };
   const grey = std({ color: 0x9ea4a9, roughness: .42, metalness: .2 });
+  // back plate on wall
   bx(E, ew, eh, .004, grey, 0, 0, 0);
-  for (const s of [-1, 1]) { bx(E, .006, eh, ed, grey, s * (ew / 2 - .003), 0, ed / 2); bx(E, ew, .006, ed, grey, 0, s * (eh / 2 - .003), ed / 2); }
-  bx(E, ew - .04, eh - .04, .003, M.backplate, 0, 0, .006);
-  // door open
-  const door = new THREE.Group(); door.position.set(-ew / 2, 0, ed); door.rotation.y = -1.85; E.add(door);
+  // body sides/top/bottom extending into room (+Z)
+  for (const s of [-1, 1]) {
+    bx(E, .006, eh, ed, grey, s * (ew / 2 - .003), 0, ed / 2);
+    bx(E, ew, .006, ed, grey, 0, s * (eh / 2 - .003), ed / 2);
+  }
+  bx(E, ew - .04, eh - .04, .003, M.backplate, 0, 0, .006); // inner backplate
+  // door: hinged at left front lip, swung ~100° into room (open toward aisle, not into wall)
+  const door = new THREE.Group(); door.name = 'nema_door';
+  door.position.set(-ew / 2, 0, ed);
+  door.rotation.y = 1.75; // open outward into +X/+Z aisle quadrant — clear of wall
+  E.add(door);
   bx(door, ew, eh, .004, std({ color: 0x9ea4a9, roughness: .4, metalness: .2, transparent: true, opacity: .38, depthWrite: false, side: THREE.DoubleSide }), ew / 2, 0, 0);
-  // HA Green + DIN hint
-  rb(E, .10, .10, .03, .012, M.haGreen, -.12, -.12, .04);
-  rb(E, .08, .06, .03, .006, std({ color: 0xe9eae6, roughness: .5 }), .1, -.1, .04);
-  decal(E, labelTex(256, 64, '#2b2f33', [{ t: 'NEMA 4X 20×16×8', c: '#fff', f: 'bold 28px Arial', y: 36 }], '#fff'), .14, .035, 0, eh / 2 + .02, ed - .01);
-  label('Controls · NEMA 20×16×8', 'HA Green · OpenSprinkler reserve · door open', [EX, EY + .28, EZ - .15], 'elec');
+  // HA Green + DIN gear inside box (near backplate, visible when door open)
+  rb(E, .10, .10, .03, .012, M.haGreen, -.12, -.12, .05);
+  rb(E, .08, .06, .03, .006, std({ color: 0xe9eae6, roughness: .5 }), .1, -.1, .05);
+  decal(E, labelTex(256, 64, '#2b2f33', [{ t: 'NEMA 4X 20×16×8', c: '#fff', f: 'bold 28px Arial', y: 36 }], '#fff'), .14, .035, 0, eh / 2 + .02, ed + .01, 0, 0);
+  label('Controls · NEMA 20×16×8', 'HA Green · door swings into room', [EX, EY + .28, EZ + ed + .12], 'elec');
   addBoxObs('nema', EX, EY, EZ + ed / 2, ew * 0.95, eh * 0.95, ed * 0.9);
+  window.__ENCLOSURES = window.__ENCLOSURES || [];
+  window.__ENCLOSURES.push({
+    name: 'nema',
+    wall: 'back',
+    mount: [EX, EY, EZ],
+    doorOpenNormal: [0, 0, 1],
+    bodyIntoRoom: [0, 0, 1],
+  });
 }
 
 // Outlets on back wall HIGH (avoid tanks at 48")
 for (const x of [18 * IN, 50 * IN]) {
-  bx(scene, .07, .10, .04, M.galv, x, 84 * IN, DEPTH - .03);
-  label('120 V outlet', '~84″ AFF (above tanks)', [x, 2.25, DEPTH - .08], 'elec minor');
+  bx(scene, .07, .10, .04, M.galv, x, 84 * IN, 0.03);
+  label('120 V outlet', '~84″ AFF (above tanks)', [x, 2.25, 0.10], 'elec minor');
 }
 // stub-outs marker low right
-bx(scene, .05, .08, .04, std({ color: 0xc55a11, roughness: .5 }), W - .03, 12 * IN, 10 * IN);
-label('Stub-outs', 'low on right wall (photo)', [W - .22, 0.45, 10 * IN], 'minor');
+bx(scene, .05, .08, .04, std({ color: 0xc55a11, roughness: .5 }), W - .03, 12 * IN, DEPTH - 10 * IN);
+label('Stub-outs', 'low on right wall (photo)', [W - .22, 0.45, DEPTH - 10 * IN], 'minor');
 
 // Flood sensors
 cy(scene, .036, .026, M.white, 30 * IN, .013, 14 * IN, 32);
@@ -1198,18 +1224,38 @@ scene.add(key, key.target);
 const fill = new THREE.DirectionalLight(0xdfe9ff, 0.75); fill.position.set(-2, 4, 5); fill.target.position.set(W / 2, 1, DEPTH / 2); scene.add(fill, fill.target);
 const shop = new THREE.PointLight(0xfff4e2, 4.5, 8, 2); shop.position.set(W / 2, H - 0.15, DEPTH / 2); scene.add(shop);
 
+
+/* ---- Orientation compass (floor + wall tags) — door/front at +Z ---- */
+{
+  const mkTag = (txt, x, y, z, ry = 0, cls = 'warn') => {
+    label(txt, '', [x, y, z], cls + ' minor');
+    const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; scene.add(g);
+    decal(g, labelTex(256, 64, '#1a1c1e', [{ t: txt, c: '#ffe08a', f: 'bold 40px Arial', y: 38 }], '#ffe08a'), .22, .05, 0, 0, 0);
+  };
+  // Floor strips
+  bx(scene, W * 0.5, 0.002, 0.04, std({ color: 0xc0181e, roughness: .6 }), W / 2, 0.005, DEPTH - 0.06); // front
+  bx(scene, W * 0.5, 0.002, 0.04, std({ color: 0x2a6fbf, roughness: .6 }), W / 2, 0.005, 0.06); // back
+  mkTag('FRONT / DOOR', W / 2, 0.04, DEPTH - 0.18, 0, 'warn');
+  mkTag('BACK', W / 2, 0.04, 0.18, Math.PI, 'warn');
+  mkTag('LEFT', 0.18, 0.04, DEPTH / 2, Math.PI / 2, 'warn');
+  mkTag('RIGHT', W - 0.18, 0.04, DEPTH / 2, -Math.PI / 2, 'warn');
+  label('← LEFT (PT)', 'door on this side', [0.35, 0.35, DEPTH * 0.55], 'minor');
+  label('RIGHT (drain + train) →', '3″ BACK-RIGHT', [W - 0.45, 0.35, DEPTH * 0.55], 'minor');
+}
+
 /* ================================================================== VIEWS */
 const VIEWS = {
-  orbit: { p: [W / 2 + 2.0, 2.2, -2.2], t: [W / 2, 1.05, DEPTH / 2] },
-  front: { p: [W / 2, 1.55, -2.5], t: [W / 2, 1.1, DEPTH / 2] },
-  top:   { p: [W / 2, 5.4, DEPTH / 2 + 0.01], t: [W / 2, 0, DEPTH / 2] },
-  right: { p: [W + 2.6, 1.55, DEPTH / 2], t: [W * 0.55, 1.15, DEPTH / 2] },
-  back:  { p: [W / 2, 1.55, DEPTH + 2.6], t: [W / 2, 1.1, DEPTH / 2] },
-  inlet: { p: [trainX - 0.9, 1.35, 0.05], t: [trainX - 0.05, 1.2, 0.35] },
-  tanks: { p: [W / 2 - 0.2, 1.4, 0.3], t: [AIO_X + .15, 1.0, DEPTH - .25] },
-  uv:    { p: [trainX - 1.3, 1.35, Z.uv], t: [trainX - 0.05, 1.2, Z.uv] },
-  controls: { p: [W - 0.3, 2.15, DEPTH - 1.6], t: [W - 0.25, 2.15, DEPTH - 0.15] },
-  drain: { p: [W + 0.3, 1.0, DEPTH + 1.3], t: [DRAIN_X, 0.55, DRAIN_Z] },
+  // Front/doorway at +Z looking down −Z → +X on screen-right (tank LEFT, drain RIGHT).
+  orbit: { p: [W / 2 - 1.6, 2.3, DEPTH + 2.4], t: [W / 2, 1.05, DEPTH * 0.35], up: [0, 1, 0] },
+  front: { p: [W / 2, 1.55, DEPTH + 2.6], t: [W / 2, 1.05, DEPTH * 0.28], up: [0, 1, 0] },
+  top:   { p: [W / 2, 5.6, DEPTH / 2], t: [W / 2, 0, DEPTH / 2], up: [0, 0, -1] },
+  right: { p: [W + 2.8, 1.55, DEPTH * 0.45], t: [W * 0.55, 1.15, DEPTH * 0.35], up: [0, 1, 0] },
+  back:  { p: [W / 2, 1.45, DEPTH * 0.72], t: [W / 2, 1.05, 0.15], up: [0, 1, 0] },
+  inlet: { p: [trainX - 0.9, 1.35, Z.stub + 0.55], t: [trainX - 0.05, 1.2, Z.stub], up: [0, 1, 0] },
+  tanks: { p: [W / 2 - 0.15, 1.4, DEPTH * 0.75], t: [AIO_X + .2, 1.0, AIO_Z + .05], up: [0, 1, 0] },
+  uv:    { p: [trainX - 1.3, 1.35, Z.uv], t: [trainX - 0.05, 1.2, Z.uv], up: [0, 1, 0] },
+  controls: { p: [W - 0.5, 2.2, 1.4], t: [W - 18 * IN, 86 * IN, 0.25], up: [0, 1, 0] },
+  drain: { p: [W + 0.35, 1.05, DRAIN_Z + 1.15], t: [DRAIN_X - 0.05, 0.55, DRAIN_Z], up: [0, 1, 0] },
 };
 const ceiling = scene.getObjectByName('ceiling');
 const _v = new THREE.Vector3();
@@ -1274,6 +1320,7 @@ function setLabels(on) {
 window.setView = function (name) {
   const v = VIEWS[name] || VIEWS.orbit;
   document.body.classList.toggle('detail', ['inlet', 'tanks', 'uv', 'controls', 'drain'].includes(name));
+  camera.up.set(...(v.up || [0, 1, 0]));
   camera.position.set(...v.p); controls.target.set(...v.t);
   controls.update(); renderFrame(); curView = name;
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === name));
@@ -1314,12 +1361,12 @@ const UNITS = [];
     ['airGaps', S({ name: 'Air-gap clip bracket', model: 'Galvanised strap + one clip per drain line above the rim', what: 'Holds each drain end so the open gap stays visible and back-siphoning cannot occur.', flow: 'Above the 3″ receptor.', vendor: 'Plumber', price: 'TBD' }), [DRAIN_X, DRAIN_RIM + .12, DRAIN_Z], [.16, .1, .16]],
     ['aioDrain', S({ name: 'Iron filter backwash line', model: 'Atmos-AIO / Clack WS1 drain (¾", pressurised)', what: 'Carries the ~6.5 gpm iron-filter backwash. Routed outside the tank shell to its own air gap.', flow: 'From AIO head south into aisle, east of brine, downhill to BACK-RIGHT receptor.', vendor: 'Plumber', price: 'TBD' }), [AIO_X + 7 * IN, 0.9, AIO_Z - .1], [.08, 1.0, .2]],
     ['softDrain', S({ name: 'Softener regeneration drain', model: 'Clack WS1 softener drain (pressurised)', what: 'Own line and own air gap; never shares a pipe with the brine overflow.', flow: 'From softener head south into aisle, east of brine, downhill to BACK-RIGHT receptor.', vendor: 'Plumber', price: 'TBD' }), [SOFT_X + 8 * IN, 0.85, SOFT_Z - .1], [.08, 1.0, .2]],
-    ['brineOver', S({ name: 'Brine tank overflow (gravity)', model: '½" overflow from brine elbow', what: 'Gravity only — continuous fall, never teed into a pressurised drain. Own air gap at the receptor.', flow: 'From brine overflow elbow toward the BACK-RIGHT receptor.', vendor: 'Plumber', price: 'TBD' }), [BRINE_X + .2, .55, BRINE_Z - .1], [.2, .3, .35]],
+    ['brineOver', S({ name: 'Brine tank overflow (gravity)', model: '½" overflow from brine elbow', what: 'Gravity only — continuous fall, never teed into a pressurised drain. Own air gap at the receptor.', flow: 'From brine overflow elbow toward the BACK-RIGHT receptor.', vendor: 'Plumber', price: 'TBD' }), [BRINE_X + .2, .55, BRINE_Z + .1], [.2, .3, .35]],
     ['afvLine', S({ name: 'AFV flush drain line', model: '1" Sch 40 PVC to receptor air gap', what: 'Carries short AFV flush bursts from the local funnel to the 3″ receptor.', flow: 'Along the right wall low, from spin-down (near back) downhill to BACK-RIGHT receptor.', vendor: 'Plumber', price: 'TBD' }), [trainX - .08, 0.4, (Z.spin + DRAIN_Z) / 2], [.08, .1, .4]],
     ['meter', S({ name: 'Pulse water meter', model: 'DAE MJP-100P · 1" · 1 gallon per pulse', what: 'Counts every gallon and proves shut-off valves really closed.', flow: 'Right wall after spin-down, before leak shut-off.', vendor: 'DAE Control', price: '$119.00' }), [trainX, trainY, Z.meter], [.18, .16, .14]],
     ['leakValve', S({ name: 'Leak shut-off valve', ...NS, what: 'Automatic main shut-off. Spring closes it if a leak sensor trips or power is lost. Bypassed when the main bypass is open.', flow: 'Right wall after the meter, before the jump to AIO/softener.' }), [trainX, trainY + .05, Z.leak], [.14, .22, .12]],
     ['aio', S({ name: 'Iron / sulphur filter', model: 'Aquatell Atmos-AIO · Clack WS1 · 10×54 · Katalox Light', what: 'Injects air to oxidise iron and sulphur and traps particles, then backwashes to the drain.', flow: 'Back wall, east of the pressure tank. Confirm Clack bypass with order.', vendor: 'Aquatell', price: '$1,198.99' }), [AIO_X, .9, AIO_Z], [.3, 1.8, .32]],
-    ['P1', TAP('P1', 'After the Atmos-AIO, on the aisle header before the softener.'), [AIO_X + .18, 1.55, DEPTH - 16 * IN], [.1, .3, .1]],
+    ['P1', TAP('P1', 'After the Atmos-AIO, on the aisle header before the softener.'), [AIO_X + .18, 1.55, 16 * IN], [.1, .3, .1]],
     ['softener', S({ name: 'Water softener', model: 'AquaHome Clack WS1 64K · 12×48 · 2.0 ft³ · EZsalt', what: 'Removes hardness. Sized for post-AIO hardness. EZsalt reports salt level.', flow: 'Back wall, east of the AIO; brine tank in the aisle.', vendor: 'AquaHome Supply', price: '$1,799.00' }), [SOFT_X, .85, SOFT_Z], [.34, 1.7, .36]],
     ['brine', S({ name: 'Brine tank + EZsalt', model: '18×33 brine tank · EZsalt level sensor', what: 'Holds salt for softener regeneration. Overflow is gravity-only to the receptor.', flow: 'Aisle, forward of the softener; fill from the aisle.', vendor: 'AquaHome (with softener)', price: 'Included' }), [BRINE_X, .45, BRINE_Z], [.48, .95, .48]],
     ['P2', TAP('P2', 'Right wall after return from softener, before Big Blue.'), [trainX, trainY + .1, Z.p2], [.1, .3, .1]],
@@ -1328,22 +1375,22 @@ const UNITS = [];
     ['P3', TAP('P3', 'After Big Blue, before the 6 gpm limiter.'), [trainX, trainY + .1, Z.p3], [.1, .3, .1]],
     ['neoflo', S({ name: '6 gpm flow limiter', model: 'neoFlo FRSS-6-100FF · 316 SS', what: 'Caps flow at 6 gpm so water never races through the UV. Do NOT also install the PRO20 bundled restrictor.', flow: 'Right wall after P3, before UV.', vendor: 'FreshWaterSystems', price: '$48.95' }), [trainX, trainY, Z.lim], [.1, .08, .1]],
     ['isoUVin', ISO('UV isolation valve (in)', 'After limiter, before PRO20.'), [trainX, trainY + .02, Z.uvIn], [.1, .14, .1]],
-    ['uv', S({ name: 'UV disinfection system', model: 'VIQUA PRO20 650653 · NSF/ANSI 55 Class A (bundled restrictor NOT installed)', what: 'Ultraviolet light kills bacteria and viruses. Mount vertical with ≥36″ lamp/sleeve pull up — fits under 106″ with base ≈28–30″ AFF. No separate UV bypass (option A).', flow: 'Right wall toward back; base ~28″ AFF.', vendor: 'AquaHome Supply', price: '$3,264.00' }), [trainX - .06, 28 * IN + 20 * IN, Z.uv], [.14, 1.1, .14]],
+    ['uv', S({ name: 'UV disinfection system', model: 'VIQUA PRO20 650653 · NSF/ANSI 55 Class A (bundled restrictor NOT installed)', what: 'Ultraviolet light kills bacteria and viruses. Mount vertical with ≥36″ lamp/sleeve pull up — fits under 106″ with base ≈28–30″ AFF. No separate UV bypass (option A).', flow: 'Right wall mid-front of train; base ~28″ AFF; ≥36″ lamp pull UP clears 106″.', vendor: 'AquaHome Supply', price: '$3,264.00' }), [trainX - .06, 28 * IN + 20 * IN, Z.uv], [.14, 1.1, .14]],
     ['uvValve', S({ name: 'UV shut-off valve', ...NS, what: 'Only opens while UV reports healthy. Spring closes on fault or power loss.', flow: 'Right wall after PRO20, before P4.' }), [trainX, trainY + .05, Z.uvSv], [.14, .22, .12]],
     ['bypass', S({ name: 'Main whole-train bypass (padlocked closed)', model: 'Raven L-610T001-NL 1" lockable ball valve + padlock + reed switch', what: 'Lets untreated water go around the entire treatment train for emergencies. Kept locked closed. Opening also bypasses the leak shutoff. Option A: this is the ONLY padlock — no separate UV bypass.', flow: 'High loop at ~96″ AFF along the right wall, from inlet riser to house riser.', vendor: 'SupplyHouse', price: '$29.53' }), [trainX, bypassY, DEPTH / 2], [.14, .22, .16]],
     ['reed', S({ name: 'Bypass reed switch', model: 'Tane FM-106 magnetic reed switch', what: 'If anyone opens the main bypass, Home Assistant raises a persistent UNTREATED WATER alert.', flow: 'On the main bypass valve handle; wired to the ESP32.', vendor: 'Amazon', price: 'Price not verified' }), [trainX - .05, bypassY + .08, DEPTH / 2], [.06, .06, .06]],
     ['P4', TAP('P4', 'After UV shut-off, before house supply.'), [trainX, trainY + .1, Z.p4], [.1, .32, .1]],
     ['isoHouse', ISO('Isolation valve (to house)', 'Last valve after P4; doubles as main outlet isolation.'), [trainX, trainY + .02, Z.house - .08], [.1, .14, .1]],
-    ['enclosure', S({ name: 'Controls enclosure (NEMA 4X)', model: 'NEMA 4X · 20×16×8 in · hinged door + backplate (door shown open)', what: 'Holds DIN PSUs, Shelly 1, relay, ESP32, HA Green, OpenSprinkler reserve.', flow: 'Back-right wall high, above brine/softener area.', vendor: 'AutomationDirect', price: '≈ $200–350' }), [W - 10 * IN, 86 * IN, DEPTH - 4 * IN], [.55, .45, .25]],
-    ['haGreen', S({ name: 'Home Assistant Green', model: 'Home Assistant Green hub (12 V adapter included)', what: 'Local smart-home brain: sensors, dashboards, alerts, automations — no cloud required.', flow: 'Inside the NEMA enclosure.', vendor: 'CloudFree', price: '$198.85' }), [W - 12 * IN, 84 * IN, DEPTH - 3 * IN], [.14, .14, .1]],
-    ['hdr24', S({ name: '24 V power supply', model: 'Mean Well HDR-60-24', what: 'Powers both shut-off valve coils and the interposing relay.', flow: 'Inside NEMA, top DIN rail.', vendor: 'DigiKey', price: '$20.90' }), [W - 10 * IN, 88 * IN, DEPTH - 3 * IN], [.08, .1, .1]],
-    ['hdr5', S({ name: '5 V power supply (fused)', model: 'Mean Well HDR-15-5 + fuse', what: 'Fused 5 V for ESP32 and five pressure transducers.', flow: 'Inside NEMA, top DIN rail.', vendor: 'DigiKey', price: '$12.50' }), [W - 8 * IN, 88 * IN, DEPTH - 3 * IN], [.06, .1, .1]],
-    ['relay', S({ name: 'Interposing relay', model: 'AutomationDirect ZL-RLS1-24', what: 'COMMcenter “UV healthy” contact energises this relay; only then does 24 V reach the UV shut-off.', flow: 'Inside NEMA.', vendor: 'AutomationDirect', price: '$34.50' }), [W - 7 * IN, 88 * IN, DEPTH - 3 * IN], [.06, .1, .1]],
-    ['shelly1', S({ name: 'Leak valve driver', model: 'Shelly 1 Gen4 UL', what: 'Switches 24 V to the leak shut-off. Flood sensors can trip it directly.', flow: 'Inside NEMA.', vendor: 'Shelly US', price: '$27.99' }), [W - 6 * IN, 88 * IN, DEPTH - 3 * IN], [.06, .1, .1]],
-    ['esp32', S({ name: 'ESP32 sensor controller', model: 'ESP32-DevKitC + 2× ADS1115 + NOYITO + dividers', what: 'Reads taps, meter pulses, bypass reed and UV intensity for Home Assistant.', flow: 'Inside NEMA, middle row.', vendor: 'Amazon', price: '~$40 combined' }), [W - 10 * IN, 85 * IN, DEPTH - 3 * IN], [.2, .08, .1]],
-    ['opensprinkler', S({ name: 'OpenSprinkler 3.x (reserved)', model: 'OpenSprinkler 3.x · 24 VAC · expandable', what: 'Wi-Fi sprinkler controller space reserved in the enclosure — not purchased yet.', flow: 'Inside NEMA, reserved slot.', vendor: 'OpenSprinkler (not purchased)', price: '≈ $150–250' }), [W - 8 * IN, 83 * IN, DEPTH - 3 * IN], [.16, .1, .08]],
-    ['flood1', S({ name: 'Leak sensor (train)', model: 'Shelly Flood Gen4', what: 'Floor sensor under the right-wall train; trips leak valve even if HA is down.', flow: 'Floor near spin-down / meter.', vendor: 'Shelly US', price: '$39.20' }), [30 * IN, .02, 14 * IN], [.1, .05, .1]],
-    ['flood2', S({ name: 'Leak sensor (brine)', model: 'Shelly Flood Gen4', what: 'Detects brine/softener drain leaks.', flow: 'Floor beside the brine tank.', vendor: 'Shelly US', price: '$39.20' }), [BRINE_X - .15, .02, BRINE_Z - .15], [.1, .05, .1]],
+    ['enclosure', S({ name: 'Controls enclosure (NEMA 4X)', model: 'NEMA 4X · 20×16×8 in · hinged door + backplate (door shown open)', what: 'Holds DIN PSUs, Shelly 1, relay, ESP32, HA Green, OpenSprinkler reserve.', flow: 'Back-right wall high, above brine/softener area.', vendor: 'AutomationDirect', price: '≈ $200–350' }), [W - 18 * IN, 86 * IN, 4 * IN], [.55, .45, .30]],
+    ['haGreen', S({ name: 'Home Assistant Green', model: 'Home Assistant Green hub (12 V adapter included)', what: 'Local smart-home brain: sensors, dashboards, alerts, automations — no cloud required.', flow: 'Inside the NEMA enclosure.', vendor: 'CloudFree', price: '$198.85' }), [W - 18 * IN - .05, 84 * IN, 3 * IN], [.14, .14, .1]],
+    ['hdr24', S({ name: '24 V power supply', model: 'Mean Well HDR-60-24', what: 'Powers both shut-off valve coils and the interposing relay.', flow: 'Inside NEMA, top DIN rail.', vendor: 'DigiKey', price: '$20.90' }), [W - 18 * IN, 88 * IN, 3 * IN], [.08, .1, .1]],
+    ['hdr5', S({ name: '5 V power supply (fused)', model: 'Mean Well HDR-15-5 + fuse', what: 'Fused 5 V for ESP32 and five pressure transducers.', flow: 'Inside NEMA, top DIN rail.', vendor: 'DigiKey', price: '$12.50' }), [W - 16 * IN, 88 * IN, 3 * IN], [.06, .1, .1]],
+    ['relay', S({ name: 'Interposing relay', model: 'AutomationDirect ZL-RLS1-24', what: 'COMMcenter “UV healthy” contact energises this relay; only then does 24 V reach the UV shut-off.', flow: 'Inside NEMA.', vendor: 'AutomationDirect', price: '$34.50' }), [W - 15 * IN, 88 * IN, 3 * IN], [.06, .1, .1]],
+    ['shelly1', S({ name: 'Leak valve driver', model: 'Shelly 1 Gen4 UL', what: 'Switches 24 V to the leak shut-off. Flood sensors can trip it directly.', flow: 'Inside NEMA.', vendor: 'Shelly US', price: '$27.99' }), [W - 14 * IN, 88 * IN, 3 * IN], [.06, .1, .1]],
+    ['esp32', S({ name: 'ESP32 sensor controller', model: 'ESP32-DevKitC + 2× ADS1115 + NOYITO + dividers', what: 'Reads taps, meter pulses, bypass reed and UV intensity for Home Assistant.', flow: 'Inside NEMA, middle row.', vendor: 'Amazon', price: '~$40 combined' }), [W - 18 * IN, 85 * IN, 3 * IN], [.2, .08, .1]],
+    ['opensprinkler', S({ name: 'OpenSprinkler 3.x (reserved)', model: 'OpenSprinkler 3.x · 24 VAC · expandable', what: 'Wi-Fi sprinkler controller space reserved in the enclosure — not purchased yet.', flow: 'Inside NEMA, reserved slot.', vendor: 'OpenSprinkler (not purchased)', price: '≈ $150–250' }), [W - 16 * IN, 83 * IN, 3 * IN], [.16, .1, .08]],
+    ['flood1', S({ name: 'Leak sensor (train)', model: 'Shelly Flood Gen4', what: 'Floor sensor under the right-wall train; trips leak valve even if HA is down.', flow: 'Floor near spin-down / meter.', vendor: 'Shelly US', price: '$39.20' }), [trainX - .25, .02, Z.meter], [.1, .05, .1]],
+    ['flood2', S({ name: 'Leak sensor (brine)', model: 'Shelly Flood Gen4', what: 'Detects brine/softener drain leaks.', flow: 'Floor beside the brine tank.', vendor: 'Shelly US', price: '$39.20' }), [BRINE_X - .15, .02, BRINE_Z + .15], [.1, .05, .1]],
     ['uvCtrl', S({ name: 'VIQUA PRO20 controller', model: 'Included with PRO20', what: 'Runs the UV lamp and shows status/alarms.', flow: 'Right wall above the UV chamber.', vendor: 'with PRO20', price: 'Included' }), [W - .06, 1.95, Z.uv + .12], [.2, .16, .1]],
     ['comm', S({ name: 'VIQUA COMMcenter', model: '270272-R COMMcenter kit', what: 'Dry contact closed only while UV is healthy — drives the interposing relay.', flow: 'Beside the UV controller on the right wall.', vendor: 'Aquatell', price: '$855.00' }), [W - .06, 1.95, Z.uv + .28], [.14, .12, .08]],
     ['isoInlet', ISO('Isolation valve (train inlet)', 'Right wall at stubs; doubles as main inlet isolation for the whole train.'), [trainX, trainY + .02, Z.stub], [.1, .14, .1]],
@@ -1403,7 +1450,32 @@ window.selectUnitById = id => { const g = UNITS.find(u => u.userData.unit.id ===
 window.unitIds = () => UNITS.map(u => u.userData.unit.id);
 
 /* Export geometry for build-time intersection check */
-window.__exportCollision = () => JSON.stringify({ segs: PIPE_SEGS, obs: OBSTACLES, gravity: GRAVITY_SEGS });
+window.__exportCollision = () => JSON.stringify({
+  segs: PIPE_SEGS, obs: OBSTACLES, gravity: GRAVITY_SEGS,
+  enclosures: window.__ENCLOSURES || [],
+  landmarks: {
+    tank: [PT_X, 0.8, PT_Z],
+    drain: [DRAIN_X, DRAIN_RIM / 2, DRAIN_Z],
+    door: [15 * IN, 0.1, DEPTH],
+    W, DEPTH, H,
+  },
+  views: { front: VIEWS.front, top: VIEWS.top },
+});
+window.__projectFront = () => {
+  // Project tank & drain with the Front camera; return NDC x (left=-1..right=+1)
+  const v = VIEWS.front;
+  const cam = camera.clone();
+  cam.up.set(...(v.up || [0, 1, 0]));
+  cam.position.set(...v.p);
+  cam.lookAt(...v.t);
+  cam.updateMatrixWorld(true);
+  cam.updateProjectionMatrix();
+  const toNdc = (p) => {
+    const vv = V(p[0], p[1], p[2]).project(cam);
+    return { x: vv.x, y: vv.y };
+  };
+  return { tank: toNdc([PT_X, 0.9, PT_Z]), drain: toNdc([DRAIN_X, 0.55, DRAIN_Z]), door: toNdc([15 * IN, 0.2, DEPTH]) };
+};
 
 const params = new URLSearchParams(location.search);
 const hp = new URLSearchParams(location.hash.slice(1));
